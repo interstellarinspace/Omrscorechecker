@@ -5,62 +5,109 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>{% block title %}OMR Score Check{% endblock %}</title>
 {% block meta %}<meta name="robots" content="noindex">{% endblock %}
-<meta name="theme-color" content="#2457d6">
+<meta name="theme-color" content="#4338ca">
 <link rel="icon" href="{{ url_for('static', filename='icon-192.png') }}" sizes="192x192">
 <link rel="apple-touch-icon" href="{{ url_for('static', filename='icon-512.png') }}">
 <style>
-  :root { --bg:#f5f6f8; --card:#fff; --ink:#1d2330; --muted:#677085; --accent:#2457d6; --ok:#1f8a3b; --bad:#c62f2f; --warn:#c77700; --line:#e2e5ec; }
+  :root { --bg:#f3f4ff; --card:#fff; --ink:#1b1f3b; --muted:#5f6787; --accent:#4f46e5; --accent2:#7c3aed; --pink:#db2777;
+          --ok:#15803d; --okbg:#dcfce7; --bad:#dc2626; --badbg:#fee2e2; --warn:#c2410c; --warnbg:#ffedd5; --info:#0369a1; --infobg:#e0f2fe;
+          --line:#e3e5f3; --grad:linear-gradient(120deg,#4338ca 0%,#7c3aed 55%,#db2777 100%); }
   * { box-sizing:border-box; }
-  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.45 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif; }
+  body { margin:0; background:var(--bg); color:var(--ink); font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,"Noto Sans Kannada",sans-serif; }
   main { max-width:720px; margin:0 auto; padding:16px; }
-  h1 { font-size:1.4rem; margin:8px 0 16px; }
-  h2 { font-size:1.1rem; margin:0 0 12px; }
-  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:16px; margin-bottom:16px; }
-  label { display:block; font-weight:600; margin:12px 0 6px; }
-  input[type=text], input[type=password], textarea { width:100%; padding:12px; font-size:16px; border:1px solid var(--line); border-radius:8px; }
+  h1 { font-size:1.5rem; margin:8px 0 12px; line-height:1.25; }
+  h2 { font-size:1.12rem; margin:0 0 12px; }
+  a { color:var(--accent); }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:16px; box-shadow:0 6px 20px -12px rgba(67,56,202,.35); }
+  label { display:block; font-weight:600; margin:14px 0 6px; }
+  input[type=text], input[type=password], textarea, select { width:100%; padding:12px 14px; font-size:16px; border:1.5px solid var(--line); border-radius:10px; background:#fbfbff; color:var(--ink); }
+  input:focus, select:focus, textarea:focus { outline:none; border-color:var(--accent); box-shadow:0 0 0 3px rgba(79,70,229,.18); }
   textarea { font-family:ui-monospace,monospace; min-height:120px; }
-  .btn { display:block; width:100%; padding:14px; font-size:1.05rem; font-weight:600; color:#fff; background:var(--accent); border:0; border-radius:10px; text-align:center; text-decoration:none; cursor:pointer; }
-  .btn.secondary { background:#fff; color:var(--accent); border:1px solid var(--accent); }
+  .btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:14px; font-size:1.05rem; font-weight:700; color:#fff; background:var(--grad); border:0; border-radius:12px; text-align:center; text-decoration:none; cursor:pointer; box-shadow:0 8px 18px -10px rgba(124,58,237,.8); }
+  .btn:disabled { opacity:.6; cursor:wait; }
+  .btn.secondary { background:#fff; color:var(--accent); border:1.5px solid var(--accent); box-shadow:none; }
   .btn + .btn { margin-top:10px; }
-  .pick { display:flex; align-items:center; justify-content:center; min-height:140px; border:2px dashed var(--line); border-radius:12px; color:var(--muted); text-align:center; padding:12px; cursor:pointer; }
-  .pick img { max-width:100%; max-height:300px; border-radius:8px; }
+  .pick { display:flex; flex-direction:column; gap:6px; align-items:center; justify-content:center; min-height:150px; border:2px dashed #b9b4f5; background:#f7f6ff; border-radius:14px; color:var(--accent); font-weight:600; text-align:center; padding:14px; cursor:pointer; }
+  .pick .cam { font-size:2rem; }
+  .pick img { max-width:100%; max-height:300px; border-radius:10px; }
   input[type=file] { display:none; }
-  .err { background:#fdecec; color:var(--bad); border-radius:8px; padding:12px; margin-bottom:16px; }
-  .msg { background:#e8f6ec; color:var(--ok); border-radius:8px; padding:12px; margin-bottom:16px; }
+  .err { background:var(--badbg); color:var(--bad); border-radius:10px; padding:12px; margin-bottom:16px; }
+  .msg { background:var(--okbg); color:var(--ok); border-radius:10px; padding:12px; margin-bottom:16px; }
   .muted { color:var(--muted); font-size:.92rem; }
-  ul.tips { padding-left:20px; margin:8px 0 0; color:var(--muted); font-size:.92rem; }
-  .score { font-size:3rem; font-weight:800; text-align:center; margin:4px 0; }
-  .stats { display:grid; grid-template-columns:repeat(4,1fr); gap:8px; text-align:center; }
-  .stats div { background:var(--bg); border-radius:8px; padding:8px 4px; }
-  .stats b { display:block; font-size:1.2rem; }
+  ul.tips { padding-left:20px; margin:10px 0 0; color:var(--muted); font-size:.92rem; }
   table { width:100%; border-collapse:collapse; font-size:.92rem; }
   th, td { padding:6px 8px; border-bottom:1px solid var(--line); text-align:left; }
+  th { color:var(--muted); font-weight:600; }
   .r-correct { color:var(--ok); } .r-wrong { color:var(--bad); } .r-blank, .r-no_key, .r-skipped, .r-dropped { color:var(--muted); } .r-multiple { color:var(--warn); }
   .scroll { overflow-x:auto; }
   img.sheet { width:100%; border-radius:8px; border:1px solid var(--line); }
-  select { width:100%; padding:12px; font-size:16px; border:1px solid var(--line); border-radius:8px; background:#fff; color:var(--ink); }
-  .stats.five { grid-template-columns:repeat(5,1fr); }
-  .stats.five div { font-size:.8rem; }
-  details { margin-top:8px; } summary { cursor:pointer; color:var(--accent); }
-  .top { background:var(--accent); padding:12px 16px; display:flex; flex-wrap:wrap; gap:6px 16px; align-items:center; }
-  .top a { color:#fff; text-decoration:none; font-weight:700; }
-  .top nav { display:flex; flex-wrap:wrap; gap:4px 14px; }
-  .top nav a { font-weight:500; font-size:.92rem; opacity:.92; }
+  details > summary { cursor:pointer; color:var(--accent); font-weight:700; }
+  details[open] > summary { margin-bottom:10px; }
+  /* header */
+  .top { background:var(--grad); color:#fff; }
+  .top .bar { max-width:720px; margin:0 auto; padding:10px 16px; display:flex; align-items:center; gap:10px; }
+  .top .brand { color:#fff; text-decoration:none; font-weight:800; font-size:1.08rem; display:flex; align-items:center; gap:8px; }
+  .top .brand img { width:28px; height:28px; border-radius:8px; background:#fff; }
+  .back { display:inline-flex; align-items:center; gap:4px; background:rgba(255,255,255,.18); color:#fff; border:1px solid rgba(255,255,255,.35); border-radius:999px; padding:6px 12px 6px 9px; font-size:.92rem; font-weight:600; cursor:pointer; }
+  .back[hidden] { display:none; }
+  .tabs { max-width:720px; margin:0 auto; padding:0 12px 10px; display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; }
+  .tabs a { flex:none; color:#fff; text-decoration:none; font-size:.9rem; font-weight:600; padding:6px 12px; border-radius:999px; background:rgba(255,255,255,.14); }
+  .tabs a.on { background:#fff; color:var(--accent); }
+  .hero { background:var(--grad); color:#fff; border-radius:18px; padding:20px 18px; margin-bottom:16px; position:relative; overflow:hidden; }
+  .hero::after { content:""; position:absolute; right:-40px; top:-40px; width:160px; height:160px; border-radius:50%; background:rgba(255,255,255,.12); }
+  .hero h1 { margin:0 0 6px; color:#fff; }
+  .hero p { margin:0; opacity:.92; }
+  .hero .chips { display:flex; flex-wrap:wrap; gap:6px; margin-top:12px; }
+  .hero .chips span { background:rgba(255,255,255,.2); border-radius:999px; padding:3px 10px; font-size:.82rem; font-weight:600; }
   .foot { max-width:720px; margin:0 auto; padding:8px 16px 32px; }
   .foot a { color:var(--muted); }
-  h1 + .lead { margin-top:-8px; }
   .lead { color:var(--muted); }
-  .faq h3 { font-size:1rem; margin:14px 0 4px; }
-  .faq p { margin:0; color:var(--ink); }
+  .faq h3 { font-size:1rem; margin:14px 0 4px; color:var(--accent2); }
+  .faq p { margin:0; }
   .stores { display:flex; gap:10px; flex-wrap:wrap; }
   .stores a { flex:1; min-width:140px; }
   table.key td, table.key th { text-align:center; }
-  #busy { display:none; text-align:center; margin-top:12px; color:var(--muted); }
+  table.key tbody tr:nth-child(odd) { background:#f7f7ff; }
+  #busy { display:none; text-align:center; margin-top:12px; color:var(--accent); font-weight:600; }
+  /* result */
+  .result-head { text-align:center; }
+  .result-head .who { font-weight:700; font-size:1.05rem; }
+  .ring { width:170px; height:170px; margin:14px auto 10px; border-radius:50%; display:flex; flex-direction:column; align-items:center; justify-content:center;
+          background:conic-gradient(#7c3aed var(--pct,0%), #ece9fe 0); position:relative; }
+  .ring::before { content:""; position:absolute; inset:14px; background:#fff; border-radius:50%; }
+  .ring b, .ring small { position:relative; }
+  .ring b { font-size:2.4rem; font-weight:800; line-height:1; background:var(--grad); -webkit-background-clip:text; background-clip:text; color:transparent; }
+  .ring small { color:var(--muted); font-weight:600; }
+  .facts { display:flex; flex-wrap:wrap; justify-content:center; gap:6px; margin:4px 0 12px; }
+  .facts span { background:#f1f0ff; color:#3730a3; border-radius:999px; padding:3px 10px; font-size:.85rem; }
+  .stats { display:grid; grid-template-columns:repeat(5,1fr); gap:6px; text-align:center; }
+  .stats div { border-radius:12px; padding:8px 2px; font-size:.75rem; font-weight:600; }
+  .stats b { display:block; font-size:1.25rem; }
+  .s-correct { background:var(--okbg); color:var(--ok); } .s-wrong { background:var(--badbg); color:var(--bad); }
+  .s-skipped { background:var(--infobg); color:var(--info); } .s-blank { background:#eef0f5; color:#4b5563; } .s-multiple { background:var(--warnbg); color:var(--warn); }
+  .share-row { display:grid; grid-template-columns:repeat(2,1fr); gap:10px; margin-top:12px; }
+  .share { display:flex; align-items:center; justify-content:center; gap:8px; padding:12px; border:0; border-radius:12px; color:#fff; font-weight:700; font-size:.98rem; cursor:pointer; text-decoration:none; }
+  .share svg { width:20px; height:20px; fill:currentColor; }
+  .share.wa { background:#25d366; } .share.tg { background:#229ed9; }
+  .share.ig { background:linear-gradient(45deg,#f9a825,#e1306c 50%,#833ab4); } .share.more { background:#334155; }
+  .note { background:var(--infobg); color:var(--info); border-radius:10px; padding:10px 12px; margin-top:12px; font-size:.92rem; }
+  .note[hidden] { display:none; }
+  .private { display:flex; gap:12px; align-items:flex-start; }
+  .private .lock { font-size:1.8rem; line-height:1; }
 </style>
 </head>
 <body>
-<header class="top"><a href="{{ url_for('index') }}">OMR Score Check</a>
-  <nav>{% for s in cfg.subjects %}<a href="{{ url_for('answer_key', subject=s.slug) }}">{{ s.short or s.name }} key</a>{% endfor %}</nav></header>
+<header class="top">
+  <div class="bar">
+    <button type="button" class="back" id="nav-back" aria-label="Go back"{% if request.endpoint == 'index' and not r %} hidden{% endif %}>
+      <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.4 5.4 14 4l-8 8 8 8 1.4-1.4L8.8 12z"/></svg>Back</button>
+    <a class="brand" href="{{ url_for('index') }}"><img src="{{ url_for('static', filename='icon-192.png') }}" alt="">OMR Score Check</a>
+  </div>
+  <nav class="tabs">
+    <a href="{{ url_for('index') }}"{% if request.endpoint == 'index' %} class="on"{% endif %}>Check score</a>
+    {% for s in cfg.subjects %}<a href="{{ url_for('answer_key', subject=s.slug) }}"{% if subj is defined and subj.id == s.id %} class="on"{% endif %}>{{ s.short or s.name }} key</a>{% endfor %}
+  </nav>
+</header>
 <main>{% block body %}{% endblock %}</main>
 <footer class="foot muted">
   <p>OMR Score Check is an independent tool. It is not run by or affiliated with the Karnataka Examinations Authority (KEA).
@@ -69,5 +116,17 @@
   {% for s in cfg.subjects %}<a href="{{ url_for('answer_key', subject=s.slug) }}">{{ s.name }} answer key</a> · {% endfor %}
   <a href="{{ url_for('privacy') }}">Privacy</a></p>
 </footer>
+<script>
+  // Back: inside the score checker it returns from the result to the form; elsewhere it goes
+  // to the previous page of this site, or to the home page.
+  document.getElementById('nav-back').addEventListener('click', function () {
+    if (window.OMRBack && window.OMRBack()) return;
+    var home = "{{ url_for('index') }}";
+    try {
+      if (document.referrer && new URL(document.referrer).origin === location.origin && history.length > 1) { history.back(); return; }
+    } catch (e) {}
+    location.href = home;
+  });
+</script>
 </body>
 </html>

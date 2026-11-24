@@ -27,8 +27,13 @@
 </script>
 {% endblock %}
 {% block body %}
-<h1>{{ cfg.exam_short }} OMR score calculator</h1>
-<p class="lead">Photograph your OMR answer sheet and see your marks in seconds, checked against the provisional answer key. KREIS ಕೀ ಉತ್ತರಗಳು 2026.</p>
+<div id="intro">
+<div class="hero">
+  <h1>{{ cfg.exam_short }} OMR score calculator</h1>
+  <p>Photograph your OMR answer sheet and see your marks in seconds, checked against the provisional answer key. KREIS ಕೀ ಉತ್ತರಗಳು 2026.</p>
+  <div class="chips"><span>GK · Kannada · Science</span><span>Sets A1 B1 C1 D1</span><span>Free</span><span>Score card PDF</span></div>
+</div>
+</div>
 {% if error %}<div class="err">{{ error }}</div>{% endif %}
 <form class="card" id="scan-form" method="post" enctype="multipart/form-data"{% if not static_site %} onsubmit="document.getElementById('busy').style.display='block';this.querySelector('button').disabled=true"{% endif %}>
   <label for="subject">Subject</label>
@@ -39,7 +44,7 @@
   <label for="name">Your name</label>
   <input type="text" id="name" name="name" autocomplete="name" placeholder="Optional">
   <label>Photo of your answer sheet</label>
-  <label class="pick" for="sheet" id="pick">Tap to take a photo or choose one from your gallery</label>
+  <label class="pick" for="sheet" id="pick"><span class="cam" aria-hidden="true">📷</span>Tap to take a photo or choose one from your gallery</label>
   <input type="file" id="sheet" name="sheet" accept="image/*" required>
   <ul class="tips">
     <li>Lay the sheet flat in good light, without shadows across it.</li>
@@ -51,25 +56,7 @@
   <div id="busy">Reading your sheet…</div>
   {% if static_site %}<p class="muted small" id="engine-note">Your photo is checked inside your browser and is never uploaded. The first check downloads the scanner (about 30 MB), so it takes a little longer.</p>{% endif %}
 </form>
-{% if static_site %}
-<div id="result" hidden>
-  <div class="card">
-    <p class="muted" id="res-meta" style="margin:0"></p>
-    <div id="res-error" class="err" hidden></div>
-    <div class="score" id="res-score"></div>
-    <div class="stats five" id="res-stats"></div>
-    <p class="muted" id="res-marking"></p>
-  </div>
-  <div class="card">
-    <h2>How your sheet was read</h2>
-    <p class="muted">Green ring: correct. Red ring: wrong, with the right answer ringed thinly in green. Orange: more than one bubble shaded. Blue: option 5 (not attempted), and the version, register and booklet numbers. If anything looks wrong, retake the photo.</p>
-    <img class="sheet" id="res-image" alt="Your sheet with answers marked">
-  </div>
-  <div class="card scroll"><h2>Question by question</h2><table id="res-table"></table></div>
-  <button type="button" class="btn secondary" id="again">Check another sheet</button>
-  <p></p>
-</div>
-{% endif %}
+{% if static_site %}{% include "_result.html" %}{% endif %}
 {% if play_url or appstore_url %}
 <div class="card"><h2>Get the app</h2><div class="stores">
   {% if play_url %}<a class="btn" href="{{ play_url }}" rel="noopener">Google Play</a>{% endif %}
@@ -92,7 +79,9 @@
   <h3>Is my photo kept private?</h3>
   <p>{% if static_site %}On this site your photo is checked inside your own browser and is never uploaded anywhere.{% else %}Your photo is used only to calculate your score and is seen only by the site administrator. It is never sold or shared.{% endif %} See the <a href="{{ url_for('privacy') }}">privacy policy</a>.</p>
 </section>
-{% if static_site %}<script>window.OMR_BUNDLE = "{{ url_for('static', filename='omr-bundle.json') }}";</script>
+{% if static_site %}{% include "_site_js.html" %}
+<script>window.OMR_BUNDLE = "{{ url_for('static', filename='omr-bundle.json') }}";</script>
+<script src="{{ url_for('static', filename='result-view.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
 <script src="{{ url_for('static', filename='browser-scan.js') }}"></script>{% endif %}
 <script>

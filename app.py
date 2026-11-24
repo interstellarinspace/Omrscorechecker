@@ -115,6 +115,10 @@ def index():
         out = process(f.read(), subject, request.form.get("name", "").strip()[:80])
     except S.ScanError as e:
         return render_template("index.html", cfg=c, error=str(e), subject=subject)
+    if not SHOW_DETAILS:
+        out.pop("annotated_b64")
+        if out["grading"]:
+            out["grading"].pop("questions")
     return render_template("result.html", r=out, cfg=c, show_details=SHOW_DETAILS)
 
 

@@ -60,8 +60,6 @@
   // Start downloading the scanner as soon as the candidate picks a photo or subject.
   ["sheet", "subject"].forEach(function (id) { $(id).addEventListener("change", function () { load(); }); });
 
-  function fmt(x) { return (Math.round(x * 100) / 100).toString(); }
-  function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function show(el, on) { el.hidden = !on; }
   function busy(on, text) {
     var b = $("busy"); b.style.display = on ? "block" : "none"; if (text) b.textContent = text;
@@ -89,7 +87,7 @@
       var out = JSON.parse(fn(py.toPy(data), subject, $("name").value.trim()));
       fn.destroy();
       if (out.scan_error) { formError(out.scan_error); return; }
-      render(out);
+      window.OMRResult.render(out);
     } catch (e) {
       console.error(e);
       formError("Something went wrong while reading the sheet. Check your internet connection for the first download, then try again.");
@@ -98,34 +96,4 @@
     }
   });
 
-  function render(r) {
-    var g = r.grading, m = r.marking, five = r.five;
-    $("res-meta").innerHTML = esc(r.subject_name) + (r.name ? " · " + esc(r.name) : "") + "<br>Version <b>" + esc(r.version || "?") +
-      "</b> · Register no. <b>" + esc(r.register_number) + "</b> · Booklet <b>" + esc(r.booklet_serial) + "</b>";
-    $("res-error").textContent = r.error || ""; show($("res-error"), !!r.error);
-    show($("res-score"), !!g); show($("res-stats"), !!g); show($("res-marking"), !!g);
-    if (g) {
-      $("res-score").textContent = fmt(g.score) + " / " + fmt(g.max_score);
-      var c = g.counts;
-      $("res-stats").innerHTML = '<div><b class="r-correct">' + c.correct + '</b>Correct</div><div><b class="r-wrong">' + c.wrong +
-        "</b>Wrong</div><div><b>" + c.skipped + "</b>Option " + esc(five) + "</div><div><b>" + c.blank + '</b>Blank</div><div><b class="r-multiple">' +
-        c.multiple + "</b>Multiple</div>";
-      $("res-marking").textContent = "Marking: +" + fmt(m.correct) + " correct, " + fmt(m.wrong) + " wrong, " + fmt(m.skipped) + " for option " + five +
-        " (not attempted), " + fmt(m.blank) + " for no bubble shaded, " + fmt(m.multiple) + " for more than one shaded.";
-    }
-    $("res-image").src = "data:image/jpeg;base64," + r.annotated_b64;
-    var rows = g ? g.questions.filter(function (q) { return q.result !== "no_key"; }) : [];
-    $("res-table").innerHTML = "<tr><th>Q</th><th>Yours</th><th>Key</th><th>Result</th><th>Marks</th></tr>" + rows.map(function (q) {
-      var given = q.given === "*" ? "multiple" : (q.given || "–");
-      return "<tr><td>" + q.q + "</td><td>" + esc(given) + "</td><td>" + esc(q.key || "dropped") + '</td><td class="r-' + q.result + '">' +
-        esc(q.result === "skipped" ? "not attempted" : q.result) + "</td><td>" + fmt(q.marks) + "</td></tr>";
-    }).join("");
-    show(form, false); show($("result"), true); $("result").scrollIntoView();
-  }
-
-  $("again").addEventListener("click", function () {
-    show($("result"), false); show(form, true); $("sheet").value = "";
-    var p = $("pick"); p.textContent = "Tap to take a photo or choose one from your gallery";
-    form.scrollIntoView();
-  });
 })();

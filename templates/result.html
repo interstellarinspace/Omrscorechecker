@@ -1,47 +1,8 @@
 {% extends "base.html" %}
 {% block title %}Your result{% endblock %}
 {% block body %}
-{% macro num(x) %}{{ ('%.2f' % x).rstrip('0').rstrip('.') }}{% endmacro %}
-<h1>Your result</h1>
-{% if r.error %}<div class="err">{{ r.error }}</div>{% endif %}
-<div class="card">
-  <p class="muted" style="margin:0">
-    {{ r.subject_name }}{% if r.name %} · {{ r.name }}{% endif %}<br>
-    Version <b>{{ r.version or "?" }}</b> · Register no. <b>{{ r.register_number }}</b> · Booklet <b>{{ r.booklet_serial }}</b>
-  </p>
-  {% if not r.register_complete %}<p class="muted">Some register number digits were not shaded clearly (shown as ?).</p>{% endif %}
-  {% if r.grading %}
-    <div class="score">{{ num(r.grading.score) }} / {{ num(r.grading.max_score) }}</div>
-    <div class="stats five">
-      <div><b class="r-correct">{{ r.grading.counts.correct }}</b>Correct</div>
-      <div><b class="r-wrong">{{ r.grading.counts.wrong }}</b>Wrong</div>
-      <div><b>{{ r.grading.counts.skipped }}</b>Option {{ cfg.not_attempted_option }}</div>
-      <div><b>{{ r.grading.counts.blank }}</b>Blank</div>
-      <div><b class="r-multiple">{{ r.grading.counts.multiple }}</b>Multiple</div>
-    </div>
-    <p class="muted">Marking: +{{ num(cfg.marking.correct) }} correct, {{ num(cfg.marking.wrong) }} wrong,
-      {{ num(cfg.marking.skipped) }} for option {{ cfg.not_attempted_option }} (not attempted),
-      {{ num(cfg.marking.blank) }} for no bubble shaded, {{ num(cfg.marking.multiple) }} for more than one shaded.</p>
-  {% endif %}
-</div>
-{% if show_details %}
-<div class="card">
-  <h2>How your sheet was read</h2>
-  <p class="muted">Green ring: correct. Red ring: wrong, with the right answer ringed thinly in green. Orange: more than one bubble shaded. Blue: option 5 (not attempted), and the version, register and booklet numbers. If anything looks wrong, retake the photo.</p>
-  <img class="sheet" src="data:image/jpeg;base64,{{ r.annotated_b64 }}" alt="Your sheet with answers marked">
-</div>
-{% if r.grading %}
-<div class="card scroll">
-  <h2>Question by question</h2>
-  <table>
-    <tr><th>Q</th><th>Yours</th><th>Key</th><th>Result</th><th>Marks</th></tr>
-    {% for q in r.grading.questions if q.result != "no_key" %}
-    <tr><td>{{ q.q }}</td><td>{{ "multiple" if q.given == "*" else (q.given or "–") }}</td><td>{{ q.key or "dropped" }}</td>
-        <td class="r-{{ q.result }}">{{ {"skipped": "not attempted"}.get(q.result, q.result) }}</td><td>{{ num(q.marks) }}</td></tr>
-    {% endfor %}
-  </table>
-</div>
-{% endif %}
-{% endif %}
-<a class="btn secondary" href="{{ url_for('index') }}">Scan another sheet</a>
+{% include "_result.html" %}
+{% include "_site_js.html" %}
+<script>window.OMR_RESULT = {{ dict(r, marking=cfg.marking, five=cfg.not_attempted_option)|tojson }};</script>
+<script src="{{ url_for('static', filename='result-view.js') }}"></script>
 {% endblock %}
