@@ -500,7 +500,7 @@ def reader_version():
 
 def stale(state, rv):
     """Centres whose sheets with problems were read by an older reader: they are read again."""
-    return [k for k, d in (state or {}).get("done", {}).items() if d.get("failed") and d.get("reader") != rv]
+    return [k for k, d in (state or {}).get("done", {}).items() if d.get("failed") and rv not in (d.get("reader"), d.get("tried"))]
 
 
 def reread(state, keys):
@@ -550,11 +550,15 @@ def run(args):
     # Read again the centres that had sheets with problems: always when the admin asks, and by
     # itself once for every new reader. Their good sheets are published again too, which simply
     # replaces them, and the problems from the older reading leave the list.
+    # A centre being read again keeps its old entry until the new reading is in, so a centre KEA
+    # does not hand out this time (no file, a dropped connection) is not lost.
+    redo = set(state.get("redo", []))
     if req.get("recheck", 0) > state.get("recheck", 0):
-        reread(state, [k for k, d in state["done"].items() if d.get("failed")])
+        redo |= {k for k, d in state["done"].items() if d.get("failed")}
         state["recheck"] = req["recheck"]
     elif state.get("status") != "captcha":
-        reread(state, stale(state, rv))
+        redo |= set(stale(state, rv))
+    state["redo"] = sorted(redo)
     state["reader"] = rv
     state.update(status="running", message="Fetching…", started=state.get("started") or now(), updated=now(),
                  retry=req.get("retry", 0))
@@ -641,7 +645,7 @@ def run(args):
                         site.page = r.text
                     for code, cname, button in centres(site.page):
                         key = f"{kea_exam}|{dval}|{sval.strip()}|{code}"
-                        if key in state["done"]:
+                        if key in state["done"] and key not in redo:
                             continue
                         if not args.no_push and stop_requested(req["id"]):
                             stop("stopped", "Stopped by the admin. Press Start fetching to carry on.")
@@ -656,7 +660,11 @@ def run(args):
                         state["message"] = f"Working on {dname}, {sname.strip()}, centre {code}."
                         link = site.pdf_url(fields, button)
                         if not link:
-                            state["done"][key] = {"sheets": 0, "note": "no file"}
+                            if key in redo:   # keep the earlier reading; try again with the next reader
+                                state["done"][key]["tried"] = rv
+                                redo.discard(key); state["redo"] = sorted(redo)
+                            else:
+                                state["done"][key] = {"sheets": 0, "note": "no file"}
                             continue
                         site.download(link, tmp)
                         rows, failed, review = [], 0, []
@@ -687,6 +695,12 @@ def run(args):
                                     pno = r["file"].split()[-1].lstrip("p")
                                     state["failures"].append(f"{dname} centre {code} page {pno}: {r['error']}")
                                     review.append(review_row(r, subj, exam, sid, code, cname, dname, pno))
+                        if key in redo:   # the new reading replaces the earlier one and its problems
+                            new_fail = [f for f in state["failures"][-failed:]] if failed else []
+                            state["failures"] = state["failures"][:len(state["failures"]) - failed] if failed else state["failures"]
+                            reread(state, [key])
+                            state["failures"] += new_fail
+                            redo.discard(key); state["redo"] = sorted(redo)
                         if rows:
                             publish(rows, cfg, vault["pub"], f"{exam.get('short', '')} {subj['name']} centre {code}")
                         label = f"{exam['id']}-{sid}-{dname}-{code}"
