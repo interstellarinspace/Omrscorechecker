@@ -369,6 +369,7 @@ def scan(image, num_questions=100):
     img = _prepare(image)
     errors = []
     loc = None
+    flipped = False
     for attempt in (img, cv2.rotate(img, cv2.ROTATE_180)):
         try:
             loc = _locate(attempt)
@@ -376,6 +377,7 @@ def scan(image, num_questions=100):
             break
         except ScanError as e:
             errors.append(e)
+            flipped = True
     if loc is None:
         raise errors[0]
     m, grids, radius = loc
@@ -439,7 +441,24 @@ def scan(image, num_questions=100):
     elif st_d != "ok":
         version_note = "number " + ("not filled" if st_d == "blank" else "filled more than once")
 
+    name = {"name": "", "sure": False}
+    try:
+        from . import names as N
+        big, scale = img, 1.0
+        if isinstance(image, (bytes, bytearray)):   # the handwriting reads better at full size
+            big = cv2.imdecode(np.frombuffer(image, np.uint8), cv2.IMREAD_COLOR)
+            if big.shape[1] > big.shape[0]:
+                big = cv2.rotate(big, cv2.ROTATE_90_CLOCKWISE)
+            if flipped:
+                big = cv2.rotate(big, cv2.ROTATE_180)
+            scale = big.shape[0] / float(img.shape[0])
+        name = N.read_name(big, m, grids["register"]["u0"], scale)
+    except Exception:   # the name is a help for the admin; never let it stop the scoring
+        pass
+
     return {
+        "candidate_name": name["name"],
+        "name_sure": name["sure"],
         "version": version,
         "version_note": version_note,
         "register_number": reg,

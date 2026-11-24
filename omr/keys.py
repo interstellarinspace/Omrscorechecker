@@ -212,3 +212,24 @@ def grade(answers, key, cfg):
     graded = len([r for r in rows if r["result"] != "no_key"])
     return {"score": round(score, 2), "max_score": round(graded * pts["correct"], 2),
             "counts": counts, "questions": rows}
+
+
+def guess_set(answers, subject, cfg):
+    """The set a sheet was most likely written for, when its version code is not shaded.
+
+    Each set has the same questions in a different order, so the candidate's answers agree
+    with their own set's key far more than with the others. Returns (set_code, counts) only
+    when one set is clearly ahead, else (None, counts).
+    """
+    counts = {}
+    for s in cfg["set_codes"]:
+        key = load_key(subject, s, cfg)
+        if key:
+            counts[s] = grade(answers, key, cfg)["counts"]["correct"]
+    if len(counts) < 2:
+        return None, counts
+    order = sorted(counts, key=counts.get, reverse=True)
+    best, second = counts[order[0]], counts[order[1]]
+    if best >= 30 and best - second >= 12 and best >= 1.5 * second:
+        return order[0], counts
+    return None, counts

@@ -259,6 +259,13 @@ def score_page(png, subject_id, cfg, text=""):
             reg = t
     out = {"version": res["version"], "register_number": reg, "booklet_serial": res["booklet_serial"],
            "name": text_field(text, r"Candidate'?s?\s*Name", r"Name")[:80], "grading": None, "error": None}
+    if not out["name"]:
+        out["name"], out["name_sure"] = res.get("candidate_name", ""), res.get("name_sure", False)
+    if not res["version"]:
+        g, _ = K.guess_set(res["answers"], subject_id, c)
+        if g:
+            res["version"] = out["version"] = g
+            out["version_guessed"] = True
     if not res["version"] or res["version"] not in c["set_codes"]:
         out["error"] = "version code not read"
     else:
@@ -367,7 +374,8 @@ def publish(rows, cfg, admin_pub, label):
                       "exam_short": r["exam_short"], "set": r["version"], "score": g["score"],
                       "max": g["max_score"], "counts": g["counts"], "photo": r.get("file", ""),
                       "sheet": sheet, "sheet_key": b64(sk), "published": when,
-                      "centre": r.get("centre", ""), "district": r.get("district", ""), "source": "kea"})
+                      "centre": r.get("centre", ""), "district": r.get("district", ""), "source": "kea",
+                      "name_sure": bool(r.get("name_sure")), "set_guessed": bool(r.get("version_guessed"))})
     os.makedirs(rel("published/results"), exist_ok=True)
     for L in lists.values():
         with open(rel(L["path"]), "w", encoding="utf-8") as f:
@@ -428,7 +436,9 @@ def stop_requested(req_id):
 def pending(req, state):
     if not req or req.get("stop"):
         return False
-    return not (state and state.get("request") == req.get("id") and state.get("status") in ("done", "captcha"))
+    if state and state.get("request") == req.get("id") and state.get("status") == "captcha":
+        return req.get("retry", 0) > state.get("retry", 0)   # the admin pressed Continue
+    return not (state and state.get("request") == req.get("id") and state.get("status") == "done")
 
 
 def run(args):
@@ -440,7 +450,8 @@ def run(args):
         return 0
     if state.get("request") != req.get("id"):
         state = {"request": req["id"], "done": {}, "failures": [], "totals": {"centres": 0, "sheets": 0, "published": 0, "failed": 0}}
-    state.update(status="running", message="Fetching…", started=state.get("started") or now(), updated=now())
+    state.update(status="running", message="Fetching…", started=state.get("started") or now(), updated=now(),
+                 retry=req.get("retry", 0))
 
     url = req.get("url", "")
     if not link_ok(url):

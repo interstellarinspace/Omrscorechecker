@@ -12,6 +12,7 @@
   .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .grid-keys td, .grid-keys th { text-align:center; }
   .ok { color:var(--ok); font-weight:700; } .bad { color:var(--bad); font-weight:700; } .warn { color:var(--warn); font-weight:700; }
+  input.check { border-color:var(--warn); background:#fff8e6; }
   #bulk-table input { width:100%; min-width:92px; padding:6px 8px; font-size:14px; border-radius:6px; }
   .progress { height:10px; background:#ece9fe; border-radius:99px; overflow:hidden; margin:10px 0; }
   .progress div { height:100%; width:0; background:var(--grad); transition:width .2s; }
@@ -149,7 +150,9 @@
     <label for="kea-districts">Districts <span class="muted">(optional)</span></label>
     <input type="text" id="kea-districts" placeholder="Leave empty for all districts, or e.g. BALLARI, MYSORE">
     <p class="muted">KEA subjects are matched to this exam's subjects by name (for example "General Knowledge (PAPER -1)" to Paper I: General Knowledge). Subjects with no match are skipped and listed below.</p>
-    <div class="row2"><button class="btn" type="button" id="kea-start">Start fetching</button><button class="btn secondary" type="button" id="kea-stop">Stop</button></div>
+    <div class="row2"><button class="btn" type="button" id="kea-start">Start a new fetch</button><button class="btn secondary" type="button" id="kea-stop">Stop</button></div>
+    <button class="btn secondary" type="button" id="kea-continue" style="margin-top:8px">Continue from where it stopped</button>
+    <p class="muted">Continue picks up the stopped fetch: centres already done are kept and not fetched again. Start a new fetch begins from the first centre.</p>
     <p id="kea-msg"></p>
     <h2 style="margin-top:18px">Progress</h2>
     <button class="btn secondary" type="button" id="kea-refresh">Refresh progress</button>
@@ -212,6 +215,7 @@
     <button class="btn" type="button" id="bulk-scan">Scan sheets</button>
     <div class="progress" id="bulk-progress" hidden><div></div></div>
     <p class="muted" id="bulk-status"></p>
+    <button class="btn secondary" type="button" id="bulk-continue" hidden>Check the connection and continue the scan</button>
     <div class="scroll"><table id="bulk-table"></table></div>
     <p></p>
     <div class="row2"><button class="btn secondary" type="button" id="bulk-csv" disabled>Download CSV</button><button class="btn" type="button" id="bulk-publish" disabled>Publish results</button></div>

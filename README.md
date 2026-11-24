@@ -134,6 +134,20 @@ Each marked OMR sheet is stored once in `published/sheets/`, encrypted with its 
 * **Answer keys**: upload the key as PDF, Excel or CSV, check the preview, then save. Exams & subjects has
   an Add / upload key button next to every subject.
 
+### Candidate names, unshaded set codes and carrying on
+
+- `omr/names.py` reads the handwritten name from the boxes at the top of a KEA sheet: it finds
+  the box row by its orange lines, cuts out each box and reads the letter with a small network
+  (trained on EMNIST letters plus letters from KEA sheets; weights in `omr/name_model.txt`,
+  run with plain numpy so it also works in the browser). Handwriting varies, so a name the
+  reader is not sure of is marked for the admin to check. Names that cannot be found stay blank.
+- When the version code is not shaded, `keys.guess_set` scores the answers against every set's
+  key and uses a set only when it is clearly ahead. Otherwise the admin picks the set in the
+  bulk table's Set column.
+- A bulk scan that stops (connection lost, scanner problem) keeps the sheets already read; press
+  Continue to carry on. A KEA fetch keeps the centres already done; "Continue from where it
+  stopped" carries on the same fetch, "Start a new fetch" begins again.
+
 ## Exams, papers and subjects
 
 `config.json` has an `exams` list (KREIS, KAS, FDA, SDA, Warder) and each subject names its `exam` and `paper`. Every exam has a tab and a page (`/exams/<id>`), and each subject has an answer-key page that shows "Key coming soon" until a key is added. An exam can override `num_questions`, `options`, `set_codes`, `marking` and `not_attempted_option`. Photo checking works for exams with `"omr_layout": "kea_kreis"` (the KEA sheet). Other exams need their sheet layout added from a sample photo; until then their sheets can be added in the admin page's **Add one sheet** tab by typing the answers.

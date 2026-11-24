@@ -396,10 +396,19 @@
   });
   function rowStatus(r) {
     if (r.scan_error) return ["bad", r.scan_error];
-    if (r.error) return ["bad", r.error];
+    if (r.error) return ["bad", r.error + (r.answers_text && /Version Code/.test(r.error) ? " Choose the set in the Set column to score it." : "")];
     if (OMRCrypto.digits(r.register_number).length !== 9) return ["warn", "Check the register number"];
     if (OMRCrypto.digits(r.booklet_serial).length !== 6) return ["warn", "Check the booklet number"];
+    if (r.version_guessed) return ["ok", "Ready. The set was not shaded, so it was worked out from the answers (" + r.version + ")."];
     return ["ok", "Ready"];
+  }
+  function setCell(r, i) {
+    if (r.grading && !r.set_chosen) return esc(r.version || "–") + (r.version_guessed ? " *" : "");
+    if (!r.answers_text || !/Version Code/.test(r.error || r.set_chosen || "")) return esc(r.version || "–");
+    var sj = (S.cfg.subjects || []).filter(function (x) { return x.id === r.subject; })[0] || {};
+    var codes = sj.set_codes || S.cfg.set_codes || ["A1", "B1", "C1", "D1"];
+    return '<select data-i="' + i + '" data-f="set"><option value="">Choose…</option>' + codes.map(function (c) {
+      return "<option" + (c === r.version ? " selected" : "") + ">" + esc(c) + "</option>"; }).join("") + "</select>";
   }
   function renderBulk() {
     var seen = {};
@@ -411,8 +420,8 @@
         return "<tr><td>" + (i + 1) + "</td><td>" + esc(r.file) + "</td>" +
           '<td><input data-i="' + i + '" data-f="register_number" inputmode="numeric" value="' + esc(r.register_number || "") + '"></td>' +
           '<td><input data-i="' + i + '" data-f="booklet_serial" inputmode="numeric" value="' + esc(r.booklet_serial || "") + '"></td>' +
-          '<td><input data-i="' + i + '" data-f="name" value="' + esc(r.name || "") + '" placeholder="Optional"></td>' +
-          "<td>" + esc(r.version || "–") + "</td><td>" + (r.grading ? fmt(r.grading.score) + " / " + fmt(r.grading.max_score) : "–") + "</td>" +
+          '<td><input data-i="' + i + '" data-f="name" value="' + esc(r.name || "") + '" placeholder="Name"' + (r.name && !r.name_sure ? ' class="check" title="Read from the handwriting. Please check it."' : "") + '></td>' +
+          "<td>" + setCell(r, i) + "</td><td>" + (r.grading ? fmt(r.grading.score) + " / " + fmt(r.grading.max_score) : "–") + "</td>" +
           '<td class="' + st[0] + '">' + esc(st[1]) + "</td></tr>";
       }).join("");
     var ready = bulk.filter(function (r) { return !r.dup && rowStatus(r)[0] === "ok"; }).length;
@@ -421,9 +430,21 @@
   }
   $("bulk-table").addEventListener("change", function (ev) {
     var t = ev.target; if (!t.dataset || t.dataset.i == null) return;
-    bulk[+t.dataset.i][t.dataset.f] = t.dataset.f === "name" ? t.value.trim().slice(0, 80) : OMRCrypto.digits(t.value);
+    var r = bulk[+t.dataset.i];
+    if (t.dataset.f === "set") { chooseSet(r, t.value); return; }
+    if (t.dataset.f === "name") { r.name = t.value.trim().toUpperCase().slice(0, 80); r.name_sure = true; }
+    else r[t.dataset.f] = OMRCrypto.digits(t.value);
     renderBulk();
   });
+  // The version code was not shaded: the admin looks at the sheet and picks the set.
+  async function chooseSet(r, code) {
+    if (!r.set_chosen) r.set_chosen = r.error;
+    if (!code) { r.grading = null; r.version = null; r.error = r.set_chosen; renderBulk(); return; }
+    var g = await OMREngine.call("omr_grade_manual", r.subject, code, r.answers_text);
+    if (g.error) { r.error = g.error; r.grading = null; }
+    else { r.grading = g.grading; r.version = code; r.error = null; }
+    renderBulk();
+  }
   async function expandPdfs(list) {
     var out = [];
     for (var i = 0; i < list.length; i++) {
@@ -434,32 +455,74 @@
     }
     return out;
   }
-  $("bulk-scan").addEventListener("click", async function () {
-    var files = Array.prototype.slice.call($("bulk-files").files), subject = $("bulk-subject").value;
-    if (!files.length) { msg("bulk-msg", "Choose the OMR sheet photos first.", "bad"); return; }
-    var btn = this; btn.disabled = true; msg("bulk-msg", ""); bulk = []; renderBulk();
-    $("bulk-progress").hidden = false; var bar = $("bulk-progress").firstElementChild; bar.style.width = "0";
+  // Bulk scan keeps its place: if it stops (no internet, the scanner failed to load, the
+  // browser ran short of memory), Continue picks up at the next sheet and retries the sheets
+  // that failed for that reason. Sheets already read are kept.
+  var bulkFiles = [], bulkPos = 0, bulkSubject = "";
+  async function online() {
+    if (navigator.onLine === false) return false;
+    try { await fetch(location.href.split("#")[0], { method: "HEAD", cache: "no-store" }); return true; } catch (e) { return false; }
+  }
+  async function runBulk() {
+    var btn = $("bulk-scan"), cont = $("bulk-continue"); btn.disabled = true; cont.hidden = true; msg("bulk-msg", "");
+    $("bulk-progress").hidden = false; var bar = $("bulk-progress").firstElementChild;
     try {
       if (!OMREngine.isLoaded()) $("bulk-status").textContent = "Loading the scanner (first time only)…";
       await OMREngine.load();
-      files = await expandPdfs(files);   // a centre PDF from KEA becomes one sheet per page
-      for (var i = 0; i < files.length; i++) {
-        $("bulk-status").textContent = "Reading sheet " + (i + 1) + " of " + files.length + "…";
+      // first the sheets that failed because the scan was interrupted
+      for (var j = 0; j < bulk.length; j++) {
+        if (!bulk[j].retry) continue;
+        $("bulk-status").textContent = "Trying " + bulk[j].file + " again…";
+        var again = await readOne(bulk[j].src);
+        again.file = bulk[j].file; again.src = bulk[j].src; bulk[j] = again; renderBulk();
+        if (again.retry) throw again.cause;
+      }
+      for (; bulkPos < bulkFiles.length; bulkPos++) {
+        var i = bulkPos;
+        $("bulk-status").textContent = "Reading sheet " + (i + 1) + " of " + bulkFiles.length + "…";
         await new Promise(function (r) { setTimeout(r, 10); });
-        var r;
-        try {
-          r = await OMREngine.call("omr_run", await files[i].bytes(), subject, "", true, 72);
-          if (r.annotated_b64) { r.image = OMRCrypto.unb64(r.annotated_b64); delete r.annotated_b64; }
-        }
-        catch (e) { console.error(e); r = { scan_error: "Could not read this sheet" }; }
-        r.file = files[i].name; bulk.push(r);
-        bar.style.width = ((i + 1) / files.length * 100).toFixed(1) + "%";
+        var r = await readOne(bulkFiles[i]);
+        r.file = bulkFiles[i].name; r.src = bulkFiles[i]; bulk.push(r);
+        bar.style.width = ((i + 1) / bulkFiles.length * 100).toFixed(1) + "%";
         renderBulk();
+        if (r.retry) { bulkPos++; throw r.cause; }
       }
       var ok = bulk.filter(function (r) { return r.grading; }).length;
-      $("bulk-status").textContent = "Read " + files.length + " sheet" + (files.length > 1 ? "s" : "") + ": " + ok + " scored, " + (files.length - ok) + " need a look.";
-    } catch (e) { console.error(e); msg("bulk-msg", "The scanner could not load. Check the internet connection and try again.", "bad"); }
-    finally { btn.disabled = false; }
+      $("bulk-status").textContent = "Read " + bulk.length + " sheet" + (bulk.length > 1 ? "s" : "") + ": " + ok + " scored, " + (bulk.length - ok) + " need a look.";
+    } catch (e) {
+      console.error(e);
+      var net = !(await online());
+      msg("bulk-msg", (net ? "The internet connection was lost" : "The scan stopped (" + ((e && e.message) || "the scanner had a problem") + ")") +
+        " after " + bulkPos + " of " + bulkFiles.length + " sheets. The sheets already read are kept. " +
+        (net ? "Check the connection, then press Continue." : "Press Continue to carry on from where it stopped; if it stops again, reload the page with Ctrl+F5 and scan the rest."), "bad");
+      $("bulk-status").textContent = "Stopped at sheet " + Math.min(bulkPos + 1, bulkFiles.length) + " of " + bulkFiles.length + ".";
+      cont.hidden = false;
+    } finally { btn.disabled = false; }
+  }
+  // One sheet. A problem with the sheet itself is its result; a problem with the scanner or
+  // the connection marks it for another try.
+  async function readOne(f) {
+    try {
+      var r = await OMREngine.call("omr_run", await f.bytes(), bulkSubject, "", true, 72);
+      if (r.annotated_b64) { r.image = OMRCrypto.unb64(r.annotated_b64); delete r.annotated_b64; }
+      return r;
+    } catch (e) {
+      return { scan_error: "Not read yet: the scan was interrupted here. Press Continue to try it again.", retry: true, cause: e };
+    }
+  }
+  $("bulk-scan").addEventListener("click", async function () {
+    var files = Array.prototype.slice.call($("bulk-files").files);
+    if (!files.length) { msg("bulk-msg", "Choose the OMR sheet photos first.", "bad"); return; }
+    if (bulkPos < bulkFiles.length && !window.confirm("The last scan stopped at sheet " + (bulkPos + 1) + " of " + bulkFiles.length + ". Start again from the first sheet? (Press Cancel, then Continue, to carry on instead.)")) return;
+    this.disabled = true; bulk = []; renderBulk(); bulkSubject = $("bulk-subject").value; bulkPos = 0;
+    $("bulk-progress").firstElementChild.style.width = "0";
+    try { bulkFiles = await expandPdfs(files); }   // a centre PDF from KEA becomes one sheet per page
+    catch (e) { console.error(e); this.disabled = false; msg("bulk-msg", "Could not open the PDF. Check the internet connection (the PDF reader loads from the web) and try again.", "bad"); return; }
+    await runBulk();
+  });
+  $("bulk-continue").addEventListener("click", async function () {
+    if (!(await online())) { msg("bulk-msg", "Still no internet connection. Check it, then press Continue again.", "bad"); return; }
+    await runBulk();
   });
   $("bulk-csv").addEventListener("click", function () {
     var head = ["photo", "subject", "register_number", "booklet_serial", "name", "set", "score", "max_score", "correct", "wrong", "not_attempted", "blank", "multiple", "status"];
@@ -508,7 +571,7 @@
           if (same && e.sheet && e.sheet !== sheet && S.tree[e.sheet]) files[e.sheet] = null;
           return !same;
         });
-        S.index.push({ reg: r.register_number, booklet: r.booklet_serial, name: r.name || "", subject: r.subject, subject_name: r.subject_name, exam_short: r.exam_short,
+        S.index.push({ reg: r.register_number, booklet: r.booklet_serial, name: r.name || "", name_sure: r.name_sure !== false, subject: r.subject, subject_name: r.subject_name, exam_short: r.exam_short,
           set: r.version, score: g.score, max: g.max_score, counts: g.counts, photo: r.file, sheet: sheet, sheet_key: sk, published: when });
         done++; msg(msgId, "Saving sheet " + done + " of " + rows.length + "…");
       }
@@ -580,6 +643,7 @@
       $("one-answers").value = r.answers_text || "";
       if (r.version && sc(sid).set_codes.indexOf(r.version) >= 0) $("one-set").value = r.version;
       if (r.register_number && !$("one-reg").value) $("one-reg").value = r.register_number;
+      if (r.name && !$("one-name").value) $("one-name").value = r.name;
       if (r.booklet_serial && !$("one-booklet").value) $("one-booklet").value = r.booklet_serial;
       if (r.annotated_b64) { one.image = OMRCrypto.unb64(r.annotated_b64); one.annotated = true; }
       msg("one-msg", "Filled in from the photo" + (r.version ? " (set " + r.version + ")" : "") + ". Check the numbers and answers, then press Check score.", "ok");
@@ -852,8 +916,22 @@
   });
   $("kea-stop").addEventListener("click", async function () {
     var btn = this; btn.disabled = true;
-    try { await keaRequest(true); msg("kea-msg", "Stopping. The fetch stops after the centre it is working on. Start again to carry on.", "ok"); }
+    try { await keaRequest(true); msg("kea-msg", "Stopping. The fetch stops after the centre it is working on. Press Continue from where it stopped to carry on.", "ok"); }
     catch (e) { msg("kea-msg", e.message, "bad"); } finally { btn.disabled = false; }
+  });
+  // Carry on the same fetch (same id), so the centres already done are skipped.
+  $("kea-continue").addEventListener("click", async function () {
+    var btn = this; btn.disabled = true;
+    try {
+      if (!(await online())) throw new Error("No internet connection. Check the connection, then press Continue again.");
+      await loadTree();
+      var old = await readFile(KEA_REQ);
+      if (!old) throw new Error("No fetch has been started yet. Press Start a new fetch.");
+      old = JSON.parse(old); old.stop = false; old.retry = (old.retry || 0) + 1;
+      await commit({ "admin/kea-request.json": JSON.stringify(old, null, 1) + "\n" }, "Continue the KEA fetch: " + (old.kea_exam || ""));
+      msg("kea-msg", "Continuing. GitHub carries on from the next centre in about a minute; the centres already done are kept.", "ok");
+    } catch (e) { console.error(e); msg("kea-msg", e.message, "bad"); }
+    finally { btn.disabled = false; }
   });
   $("kea-refresh").addEventListener("click", async function () {
     var btn = this; btn.disabled = true; $("kea-status").innerHTML = "<p class='muted'>Loading…</p>";
@@ -901,7 +979,7 @@
     S.index.forEach(function (e) {
       var s = subjOf(e.subject); if ((s.exam || e.exam) !== ex) return;
       var n = paperNo(s), c = by[e.reg] || (by[e.reg] = { reg: e.reg, name: "", centre: "", p1: null, p2: null, p2subject: "", p2id: "" });
-      if (e.name && !c.name) c.name = e.name;
+      if (e.name && (!c.name || (e.name_sure !== false && c.name_sure === false))) { c.name = e.name; c.name_sure = e.name_sure; }
       if (e.centre && !c.centre) c.centre = e.centre;
       if (n === 2) { c.p2 = e.score; c.p2subject = s.subject || e.subject_name; c.p2id = e.subject; }
       else c.p1 = e.score;
