@@ -39,7 +39,7 @@ when both 2 and 3 are accepted, and `X` to drop a question (everyone gets the ma
 |---|---|
 | Correct | +1 |
 | Wrong | -0.25 |
-| Option 5 shaded | -0.25 |
+| Option 5 shaded (not attempted) | 0 |
 | No bubble shaded | -0.25 (the sheet says to shade 5 if you don't know) |
 | More than one bubble shaded | -0.25 |
 

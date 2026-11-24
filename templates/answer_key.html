@@ -31,6 +31,6 @@
     </tbody>
   </table>
 </div>
-<p class="muted">Marking: +1 for each correct answer; 0.25 deducted for each wrong answer, option 5, an unshaded question or more than one bubble shaded.</p>
+<p class="muted">Marking: +1 for each correct answer; 0 for option 5 (not attempted); 0.25 deducted for each wrong answer, an unshaded question or more than one bubble shaded.</p>
 <p class="muted">Other subjects: {% for s in cfg.subjects if s.id != subj.id %}<a href="{{ url_for('answer_key', subject=s.slug) }}">{{ s.name }}</a>{% if not loop.last %} · {% endif %}{% endfor %}</p>
 {% endblock %}

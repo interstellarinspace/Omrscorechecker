@@ -35,11 +35,11 @@
       "slug": "science-answer-key"
     }
   ],
-  "marking_note": "1 for correct; 0.25 deducted for wrong, option 5, no bubble, or more than one bubble",
+  "marking_note": "1 for correct; 0 for option 5; 0.25 deducted for wrong, no bubble, or more than one bubble",
   "marking": {
     "correct": 1,
     "wrong": -0.25,
-    "skipped": -0.25,
+    "skipped": 0,
     "blank": -0.25,
     "multiple": -0.25
   },
