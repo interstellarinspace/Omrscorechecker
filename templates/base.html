@@ -149,6 +149,14 @@
   .pick { border-color:#f9a8d4; background:linear-gradient(135deg,#fff7ed,#fdf2f8 50%,#f0f9ff); }
   .ring { background:conic-gradient(#db2777 0, #7c3aed var(--pct,0%), #fde7f3 0); }
   .facts span { background:#fdf2f8; color:#9d174d; } .facts span:nth-child(2) { background:#e0f2fe; color:#075985; } .facts span:nth-child(3) { background:#dcfce7; color:#166534; }
+  @media print {
+    body { background:#fff !important; }
+    .top, .foot, #intro, #forms, #res-share, #res-omr, #again, .err.form-err, #nav-back { display:none !important; }
+    .card { box-shadow:none !important; border:1px solid #ccc !important; break-inside:avoid; }
+    #res-qs { break-inside:auto; } #res-qs > summary { list-style:none; color:#000; }
+    #res-qs table { font-size:11px; } #res-qs td, #res-qs th { padding:2px 6px; }
+    .ring { -webkit-print-color-adjust:exact; print-color-adjust:exact; } .stats div, .facts span { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
 </style>
 </head>
 <body>

@@ -8,7 +8,7 @@
   var current = null, standalone = false, pushed = false, cardCache = {};
   var pickHTML = $("pick") ? $("pick").innerHTML : "";
 
-  function examOf(r) { return (r && r.exam_short) || SITE.exam || ""; }
+  function examOf(r) { return r && r.own_key ? "" : (r && r.exam_short) || SITE.exam || ""; }
   function fmt(x) { return (Math.round(x * 100) / 100).toString(); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function show(el, on) { if (el) el.hidden = !on; }
@@ -195,7 +195,7 @@
       doc.addImage(img, "JPEG", 30, 12, 150, 187.5);
       var m = current.marking || {}, y = 212;
       doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(60, 64, 90);
-      var lines = doc.splitTextToSize("Marking: +" + fmt(m.correct) + " for a correct answer, " + fmt(m.wrong) + " for a wrong answer, " + fmt(m.skipped) +
+      var lines = doc.splitTextToSize(current.own_key ? (current.marking_note || "") + " Worked out with your own answer key and marking scheme. This is an unofficial estimate." : "Marking: +" + fmt(m.correct) + " for a correct answer, " + fmt(m.wrong) + " for a wrong answer, " + fmt(m.skipped) +
         " for option " + (current.five || "5") + " (not attempted), " + fmt(m.blank) + " for no bubble shaded, " + fmt(m.multiple) + " for more than one bubble shaded. " +
         "This is an unofficial estimate based on the KEA provisional answer key; the final key and results announced by KEA are what count.", 150);
       doc.text(lines, 30, y);
@@ -225,11 +225,20 @@
       }
       var blob = doc.output("blob");
       download(blob, baseName() + ".pdf");
-      note("Your score card PDF has been downloaded. Look for it in your Downloads or Files app.");
+      note("Your result sheet PDF has been downloaded. Look for it in your Downloads or Files app.");
     } catch (e) {
       console.error(e);
       note("Could not make the PDF. Check your internet connection and try again.");
     } finally { btn.disabled = false; }
+  });
+
+  // ---------- print: the page's print style shows only the result and every question ----------
+  $("print-res").addEventListener("click", function () {
+    if (!current || !current.grading) return;
+    var qs = $("res-qs"), was = qs.open; qs.open = true;
+    var done = function () { qs.open = was; window.removeEventListener("afterprint", done); };
+    window.addEventListener("afterprint", done);
+    window.print();
   });
 
   // ---------- sharing ----------

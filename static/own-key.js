@@ -118,7 +118,7 @@
     var five = $("own-five").checked;
     t.textContent = "Out of " + fmt(total()) + " marks. Correct +" + fmt(num("own-correct", 1)) + (Object.keys(pq.map).length ? " (some questions differ)" : "") +
       ", wrong " + fmt(num("own-wrong", 0)) + ", no bubble " + fmt(num("own-blank", 0)) + ", more than one " + fmt(num("own-multi", 0)) +
-      (five ? ", option 5 " + fmt(num("own-skip", 0)) : "") + ($("own-scale").checked ? ". Negatives grow with each question's marks." : ".");
+      (five ? ", option 5 " + fmt(num("own-skip", 0)) : "") + ".";
   }
   // Typing the total sets the marks for each correct answer (when no question has its own marks).
   $("own-total").addEventListener("input", function () {
@@ -128,7 +128,7 @@
   ["own-n", "own-correct", "own-wrong", "own-blank", "own-multi", "own-skip", "own-perq"].forEach(function (id) {
     $(id).addEventListener("input", function () { if (id === "own-n") keyChanged(); summary(); save(); });
   });
-  ["own-five", "own-scale"].forEach(function (id) { $(id).addEventListener("change", function () { $("own-skip-wrap").hidden = !$("own-five").checked; summary(); save(); }); });
+  ["own-five"].forEach(function (id) { $(id).addEventListener("change", function () { $("own-skip-wrap").hidden = !$("own-five").checked; summary(); save(); }); });
 
   // ---------- the student's answers ----------
   // ---------- the student's OMR sheet ----------
@@ -144,7 +144,7 @@
   function scheme() {
     var five = $("own-five").checked;
     return { n: nq(), correct: num("own-correct", 1), wrong: num("own-wrong", 0), blank: num("own-blank", 0), multiple: num("own-multi", 0),
-      skipped: five ? num("own-skip", 0) : num("own-wrong", 0), five: five ? "5" : "", scale: $("own-scale").checked, per_q: perQ().map, set: $("own-set").value };
+      skipped: five ? num("own-skip", 0) : num("own-wrong", 0), five: five ? "5" : "", per_q: perQ().map, set: $("own-set").value };
   }
 
   form.addEventListener("submit", async function (ev) {
@@ -200,7 +200,7 @@
   function save() {
     try {
       var d = {}; FIELDS.forEach(function (id) { d[id] = $(id).value; });
-      d.five = $("own-five").checked; d.scale = $("own-scale").checked;
+      d.five = $("own-five").checked;
       localStorage.setItem(STORE, JSON.stringify(d));
     } catch (e) { /* private mode */ }
   }
@@ -208,7 +208,7 @@
     var d = JSON.parse(localStorage.getItem(STORE) || "null");
     if (d) {
       FIELDS.forEach(function (id) { if (d[id] != null) $(id).value = d[id]; });
-      $("own-five").checked = d.five !== false; $("own-scale").checked = !!d.scale;
+      $("own-five").checked = d.five !== false;
       $("own-skip-wrap").hidden = !$("own-five").checked;
       if (d["own-perq"]) $("own-perq-box").open = true;
     }
