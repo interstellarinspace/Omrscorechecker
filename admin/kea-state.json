@@ -1,15 +1,49 @@
 {
  "request": "2026-11-24T09:49:03.000Z",
- "done": {},
- "failures": [],
+ "done": {
+  "KREISREC26|BALLARI|General Knowledge (PAPER -1) - RPC|352": {
+   "sheets": 443,
+   "published": 425,
+   "failed": 18,
+   "centre": "SMT ASM PU COLLEGE FOR WOMEN block 1 ,GANDHINAGAR 1ST CROSS besides union bank o"
+  }
+ },
+ "failures": [
+  "BALLARI centre 352 page 9: version code not read",
+  "BALLARI centre 352 page 28: version code not read",
+  "BALLARI centre 352 page 32: version code not read",
+  "BALLARI centre 352 page 49: version code not read",
+  "BALLARI centre 352 page 93: version code not read",
+  "BALLARI centre 352 page 103: version code not read",
+  "BALLARI centre 352 page 110: version code not read",
+  "BALLARI centre 352 page 170: version code not read",
+  "BALLARI centre 352 page 199: Could not find the rows of small blue dashes along both side edges of the sheet.",
+  "BALLARI centre 352 page 261: version code not read",
+  "BALLARI centre 352 page 264: version code not read",
+  "BALLARI centre 352 page 298: version code not read",
+  "BALLARI centre 352 page 386: version code not read",
+  "BALLARI centre 352 page 393: version code not read",
+  "BALLARI centre 352 page 410: version code not read",
+  "BALLARI centre 352 page 429: version code not read",
+  "BALLARI centre 352 page 433: version code not read",
+  "BALLARI centre 352 page 443: Could not find the rows of small blue dashes along both side edges of the sheet."
+ ],
  "totals": {
-  "centres": 0,
-  "sheets": 0,
-  "published": 0,
-  "failed": 0
+  "centres": 1,
+  "sheets": 443,
+  "published": 425,
+  "failed": 18
  },
  "status": "running",
- "message": "Fetching…",
+ "message": "Working on BALLARI, General Knowledge (PAPER -1) - RPC, centre 352.",
  "started": "2026-11-24T09:49:25Z",
- "updated": "2026-11-24T09:49:25Z"
+ "updated": "2026-11-24T09:54:35Z",
+ "kea_exam_name": "KREIS TEACHERS RECRUITMENT - 2026 (22/11/2026)",
+ "districts": [
+  "BALLARI",
+  "BENGALURU",
+  "DAVANAGERE",
+  "KALABURAGI",
+  "MYSORE"
+ ]
 }
