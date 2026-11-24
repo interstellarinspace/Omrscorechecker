@@ -54,6 +54,20 @@
     try { if (new TextDecoder().decode(await openBytes(key, unb64(f.check))) === CHECK) return key; } catch (e) {}
     return null;
   }
+  // A fresh key for one OMR sheet image. The key is stored inside the candidate's encrypted
+  // result and in the admin's encrypted list, so both can open the same single copy.
+  async function newSheetKey() {
+    var raw = crypto.getRandomValues(new Uint8Array(32));
+    return { raw: b64(raw), key: await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["encrypt", "decrypt"]) };
+  }
+  function sheetKey(rawB64) { return crypto.subtle.importKey("raw", unb64(rawB64), "AES-GCM", false, ["decrypt"]); }
+  async function openSheet(url, rawB64) {
+    var res = await fetch(url, { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    var bytes = await openBytes(await sheetKey(rawB64), new Uint8Array(await res.arrayBuffer()));
+    return URL.createObjectURL(new Blob([bytes], { type: "image/jpeg" }));
+  }
   window.OMRCrypto = { derive: derive, seal: seal, open: open, digits: digits, b64: b64, unb64: unb64,
+    newSheetKey: newSheetKey, sheetKey: sheetKey, openSheet: openSheet,
     sealBytes: sealBytes, openBytes: openBytes, newVault: newVault, unlockVault: unlockVault };
 })();

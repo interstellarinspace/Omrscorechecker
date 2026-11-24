@@ -109,11 +109,13 @@ The GitHub Pages site has an admin page at an address that is not linked anywher
 
 The address is only a convenience. The real protection is:
 - **GitHub token** (fine-grained, this repository only, *Contents: Read and write*): needed to change anything.
-- **Admin passphrase** (set on first sign-in): the marked OMR sheets and the admin's results list are encrypted with it (AES-GCM, PBKDF2 310,000 rounds) in `admin/`. Without it nobody, including GitHub, can read them. It cannot be recovered if lost.
+- **Admin passphrase** (set on first sign-in): the admin's list of all published sheets (`admin/index.bin`) is encrypted with it (AES-GCM, PBKDF2 310,000 rounds). It cannot be recovered if lost.
 
 Tabs:
 - **Bulk OMR upload:** pick a subject, select many sheet photos (read in the browser), check or fix register and booklet numbers and names, download a CSV, and publish. Publishing saves each candidate's encrypted result for the public Results page and each marked OMR sheet, encrypted, for the admin.
 - **Search by register no.:** find a candidate by register number (or part of it), booklet number or name, and see their marks and attached OMR sheet.
 - **Answer keys** and **Subjects:** as before; saved to `keys/` and `config.json`.
 
-Published results live in `published/results/`. Each file is encrypted with a key derived (PBKDF2, 150,000 rounds) from the candidate's register number plus booklet number, and its file name comes from the same derivation. There is no public list of results. A candidate opens `/results`, types both numbers, and sees their marks, score card PDF and share buttons.
+Published results live in `published/results/`, one file per candidate holding all their published papers. Each file is encrypted with a key derived (PBKDF2, 150,000 rounds) from the lookup numbers, and its file name comes from the same derivation, so there is no public list. `results_lookup` in `config.json` sets the lookup numbers: `"register"` (register number only, the current setting) or `"register_booklet"` (register number plus booklet number, harder for others to guess). Changing it needs the results to be published again.
+
+Each marked OMR sheet is stored once in `published/sheets/`, encrypted with its own random key. That key is inside the candidate's result file and the admin's encrypted list, so the candidate (from the Results page, "View my OMR sheet") and the admin (Search by register no.) can both open it.

@@ -55,7 +55,7 @@
     }
     $("res-facts").innerHTML = "<span>Set <b>" + esc(r.version || "?") + "</b></span><span>Register <b>" + esc(r.register_number) +
       "</b></span><span>Booklet <b>" + esc(r.booklet_serial) + "</b></span>";
-    show($("res-omr"), !!r.annotated_b64);
+    show($("res-omr"), !!(r.annotated_b64 || (r.sheet && r.sheet_key)));
     var rows = g && g.questions ? g.questions.filter(function (q) { return q.result !== "no_key"; }) : [];
     show($("res-qs"), rows.length > 0); $("res-qs").open = false;
     $("res-table").innerHTML = "<tr><th>Q</th><th>Yours</th><th>Key</th><th>Result</th><th>Marks</th></tr>" + rows.map(function (q) {
@@ -71,7 +71,7 @@
 
   function showForm() {
     pushed = false;
-    show($("result"), false); show($("scan-form"), true); show($("intro"), true); show($("nav-back"), false);
+    show($("result"), false); show($("scan-form"), true); show($("intro"), true); show($("nav-back"), false); show($("multi"), false);
     if ($("sheet")) $("sheet").value = "";
     if ($("pick")) $("pick").innerHTML = pickHTML;
     window.scrollTo(0, 0);
@@ -89,20 +89,37 @@
   });
 
   // ---------- marked OMR in a new tab ----------
-  $("view-omr").addEventListener("click", function () {
-    if (!current || !current.annotated_b64) return;
-    var html = '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
+  function sheetPage(src) {
+    return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
       '<meta name="robots" content="noindex"><title>My marked OMR sheet</title><style>body{margin:0;background:#f3f4ff;font:15px/1.45 system-ui,sans-serif;color:#1b1f3b}' +
       'header{background:linear-gradient(120deg,#4338ca,#7c3aed 55%,#db2777);color:#fff;padding:12px 16px;font-weight:700}main{max-width:900px;margin:0 auto;padding:12px}' +
       'p{margin:0 0 10px;color:#5f6787}img{width:100%;border-radius:8px;border:1px solid #e3e5f3;background:#fff}</style></head><body>' +
       "<header>My marked OMR sheet · " + esc(current.subject_name) + " · Set " + esc(current.version || "?") + "</header><main>" +
       "<p>Green ring: correct. Red ring: wrong, with the right answer ringed thinly in green. Orange: more than one bubble shaded. " +
-      "Blue: option 5 (not attempted), and the version, register and booklet numbers. If anything looks wrong, retake the photo. " +
-      "Close this tab to go back to your score.</p>" +
-      '<img alt="Your sheet with answers marked" src="data:image/jpeg;base64,' + current.annotated_b64 + '"></main></body></html>';
-    var url = URL.createObjectURL(new Blob([html], { type: "text/html" }));
-    var w = window.open(url, "_blank");
-    if (!w) { var a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); }
+      "Blue: option 5 (not attempted), and the version, register and booklet numbers. Close this tab to go back to your score.</p>" +
+      (src ? '<img alt="Your sheet with answers marked" src="' + src + '">' : "<p>Opening your sheet…</p>") + "</main></body></html>";
+  }
+  $("view-omr").addEventListener("click", async function () {
+    if (!current) return;
+    if (current.annotated_b64) {
+      var url = URL.createObjectURL(new Blob([sheetPage("data:image/jpeg;base64," + current.annotated_b64)], { type: "text/html" }));
+      var w = window.open(url, "_blank");
+      if (!w) { var a = document.createElement("a"); a.href = url; a.target = "_blank"; a.rel = "noopener"; document.body.appendChild(a); a.click(); a.remove(); }
+      return;
+    }
+    if (!current.sheet || !current.sheet_key) return;
+    // A sheet saved by the exam admin: open the tab now (so it isn't blocked), then fill it in.
+    var tab = window.open("", "_blank"), btn = this, label = btn.textContent;
+    if (tab) { tab.document.write(sheetPage("")); tab.document.close(); }
+    btn.disabled = true; btn.textContent = "Opening…";
+    try {
+      var src = await OMRCrypto.openSheet((SITE.published || "published/") + current.sheet.replace(/^published\//, ""), current.sheet_key);
+      if (tab && !tab.closed) { tab.document.open(); tab.document.write(sheetPage(src)); tab.document.close(); }
+      else location.href = src;
+    } catch (e) {
+      console.error(e); if (tab) tab.close();
+      note("Could not open your OMR sheet right now. Check your internet connection and try again.");
+    } finally { btn.disabled = false; btn.textContent = label; }
   });
 
   // ---------- score card image ----------

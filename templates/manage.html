@@ -106,7 +106,7 @@
 
   <section class="card tab" id="tab-bulk">
     <h2>Bulk OMR upload</h2>
-    <p class="muted">Choose the subject, then select all the OMR sheet photos for that subject. Sheets are read on this computer. Check the register and booklet numbers, then publish. Publishing does two things: candidates can see their marks on the <a href="{{ url_for('results_page') }}">Results page</a> by typing both numbers, and each marked OMR sheet is saved, locked with your passphrase, so you can find it later under Search by register no.</p>
+    <p class="muted">Choose the subject, then select all the OMR sheet photos for that subject. Sheets are read on this computer. Check the register and booklet numbers, then publish. After you publish, candidates find their marks and their own marked OMR sheet on the <a href="{{ url_for('results_page') }}">Results page</a> by searching with their {% if cfg.get("results_lookup", "register_booklet") == "register" %}register number{% else %}register number and booklet number{% endif %}. You can find every sheet under Search by register no.</p>
     <label for="bulk-subject">Subject</label>
     <select id="bulk-subject"></select>
     <label>OMR sheet photos</label>

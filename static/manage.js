@@ -304,35 +304,54 @@
     var btn = this; btn.disabled = true;
     try {
       await loadTree(); await loadIndex();   // start from the latest saved list
-      var files = {}, when = new Date().toISOString().slice(0, 10), done = 0;
-      async function one(r) {
-        var pub = { subject: r.subject, subject_name: r.subject_name, name: r.name || "", version: r.version, register_number: r.register_number,
-          booklet_serial: r.booklet_serial, register_complete: true, grading: r.grading, error: null, marking: r.marking, five: r.five, published: when };
-        var sealed = await OMRCrypto.seal(pub, r.register_number, r.booklet_serial);
-        files["published/results/" + sealed.id + ".json"] = sealed.body;
-        var sheet = null;
-        if (r.image) {
-          sheet = "admin/sheets/" + Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(12)), function (x) { return ("0" + x.toString(16)).slice(-2); }).join("") + ".bin";
-          files[sheet] = await putBlob(await OMRCrypto.sealBytes(S.vault, r.image));
+      var byRegister = (S.cfg.results_lookup || "register_booklet") === "register";
+      var files = {}, lists = {}, when = new Date().toISOString().slice(0, 10), done = 0;
+      // The candidate's result file holds every paper published for the same lookup numbers.
+      async function listFor(r) {
+        var d = await OMRCrypto.derive(r.register_number, byRegister ? "" : r.booklet_serial);
+        if (!lists[d.id]) {
+          var path = "published/results/" + d.id + ".json", old = [];
+          if (S.tree[path]) {
+            try { var data = await OMRCrypto.open(new TextDecoder().decode(await getBlob(S.tree[path])), d.key); old = data.results || [data]; } catch (e) { old = []; }
+          }
+          lists[d.id] = { path: path, results: old };
         }
+        return lists[d.id];
+      }
+      async function one(r) {
+        var g = r.grading, sheet = null, sk = null;
+        if (r.image) {
+          var k = await OMRCrypto.newSheetKey(); sk = k.raw;
+          sheet = "published/sheets/" + Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(12)), function (x) { return ("0" + x.toString(16)).slice(-2); }).join("") + ".bin";
+          files[sheet] = await putBlob(await OMRCrypto.sealBytes(k.key, r.image));
+        }
+        var pub = { subject: r.subject, subject_name: r.subject_name, name: r.name || "", version: r.version, register_number: r.register_number,
+          booklet_serial: r.booklet_serial, register_complete: true, grading: g, error: null, marking: r.marking, five: r.five, published: when,
+          sheet: sheet, sheet_key: sk };
+        var L = await listFor(r);
+        L.results = L.results.filter(function (e) { return !(e.subject === r.subject && e.booklet_serial === r.booklet_serial); });
+        L.results.push(pub);
         // replace an older entry for the same sheet (same register, booklet and subject)
         S.index = S.index.filter(function (e) {
           var same = e.reg === r.register_number && e.booklet === r.booklet_serial && e.subject === r.subject;
-          if (same && e.sheet && e.sheet !== sheet) files[e.sheet] = null;
+          if (same && e.sheet && e.sheet !== sheet && S.tree[e.sheet]) files[e.sheet] = null;
           return !same;
         });
-        var g = r.grading;
         S.index.push({ reg: r.register_number, booklet: r.booklet_serial, name: r.name || "", subject: r.subject, subject_name: r.subject_name,
-          set: r.version, score: g.score, max: g.max_score, counts: g.counts, photo: r.file, sheet: sheet, published: when });
+          set: r.version, score: g.score, max: g.max_score, counts: g.counts, photo: r.file, sheet: sheet, sheet_key: sk, published: when });
         done++; msg("bulk-msg", "Saving sheet " + done + " of " + rows.length + "…");
       }
-      for (var i = 0; i < rows.length; i += 4) await Promise.all(rows.slice(i, i + 4).map(one));
+      for (var i = 0; i < rows.length; i++) await one(rows[i]);   // in order, so papers of one candidate merge correctly
+      for (var id in lists) {
+        var L = lists[id], first = L.results[0];
+        files[L.path] = (await OMRCrypto.seal({ v: 2, results: L.results }, first.register_number, byRegister ? "" : first.booklet_serial)).body;
+      }
       msg("bulk-msg", "Saving the results list…");
       files[INDEX] = await putBlob(await OMRCrypto.sealBytes(S.vault, new TextEncoder().encode(JSON.stringify(S.index))));
       await commit(files, "Publish " + rows.length + " result" + (rows.length > 1 ? "s" : "") + ": " + rows[0].subject_name);
       await loadTree();
       showSearch("");
-      msg("bulk-msg", "Published " + rows.length + " result" + (rows.length > 1 ? "s" : "") + " and saved the OMR sheets. Candidates can look them up on the Results page in about 1 to 2 minutes. You can find them now under Search by register no.", "ok");
+      msg("bulk-msg", "Published " + rows.length + " result" + (rows.length > 1 ? "s" : "") + " with their OMR sheets. Candidates can look them up on the Results page in about 1 to 2 minutes. You can find them now under Search by register no.", "ok");
     } catch (e) { console.error(e); msg("bulk-msg", e.message, "bad"); }
     finally { btn.disabled = false; }
   });
@@ -364,7 +383,7 @@
     if (sheetCache[e.sheet]) return sheetCache[e.sheet];
     if (!S.tree[e.sheet]) await loadTree();
     if (!S.tree[e.sheet]) throw new Error("This OMR sheet file is missing from the repository.");
-    var bytes = await OMRCrypto.openBytes(S.vault, await getBlob(S.tree[e.sheet]));
+    var bytes = await OMRCrypto.openBytes(e.sheet_key ? await OMRCrypto.sheetKey(e.sheet_key) : S.vault, await getBlob(S.tree[e.sheet]));
     return (sheetCache[e.sheet] = URL.createObjectURL(new Blob([bytes], { type: "image/jpeg" })));
   }
   $("search-form").addEventListener("submit", function (ev) { ev.preventDefault(); showSearch($("search-q").value); });

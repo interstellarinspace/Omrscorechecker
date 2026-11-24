@@ -7,6 +7,7 @@
 <div class="card">
 <p>OMR Score Check (website and app) checks OMR answer sheets for the {{ cfg.exam_full }}. It is an independent tool, not run by KEA.</p>
 {% if static_site %}<p><b>On this website your photo never leaves your device.</b> The answer sheet is read and scored inside your own browser. Nothing you choose or type is uploaded or stored by us. The scanner code is downloaded from this site and from the jsDelivr CDN.</p>
+<p><b>Results published by the exam administrator.</b> If the administrator checks OMR sheets in bulk, each candidate's marks and marked OMR sheet are published on this site in encrypted form, so they can be opened {% if cfg.get("results_lookup", "register_booklet") == "register" %}by entering the register number{% else %}by entering the register number and booklet number{% endif %} on the <a href="{{ url_for('results_page') }}">Results page</a>. There is no public list of results. Contact the exam administrator to have a result removed.</p>
 <p><b>In the phone app</b>, the points below apply.</p>{% endif %}
 <p><b>What we collect.</b> When you check a sheet, the app sends the photo you choose, the subject you pick and the name you type (optional) to our server. The server reads the sheet, including the register number and booklet serial number shaded on it, and returns your score.</p>
 <p><b>Why.</b> Only to calculate and show your score, and so the exam administrator can review results.</p>
