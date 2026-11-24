@@ -197,8 +197,8 @@
     <select id="bulk-subject"></select>
     <div id="bulk-layout" class="note" hidden><p id="bulk-layout-text" style="margin:0 0 8px"></p><button class="btn secondary" type="button" id="bulk-layout-on">Use the KEA OMR sheet for this exam</button></div>
     <label>OMR sheet photos</label>
-    <label class="pick" for="bulk-files" id="bulk-pick"><span class="cam" aria-hidden="true">🗂️</span>Choose photos (you can select many at once)</label>
-    <input type="file" id="bulk-files" accept="image/*" multiple>
+    <label class="pick" for="bulk-files" id="bulk-pick"><span class="cam" aria-hidden="true">🗂️</span>Choose photos or PDFs (you can select many at once; a KEA centre PDF is read page by page)</label>
+    <input type="file" id="bulk-files" accept="image/*,.pdf,application/pdf" multiple>
     <p></p>
     <button class="btn" type="button" id="bulk-scan">Scan sheets</button>
     <div class="progress" id="bulk-progress" hidden><div></div></div>

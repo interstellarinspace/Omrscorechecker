@@ -416,6 +416,30 @@
     bulk[+t.dataset.i][t.dataset.f] = t.dataset.f === "name" ? t.value.trim().slice(0, 80) : OMRCrypto.digits(t.value);
     renderBulk();
   });
+  async function expandPdfs(list) {
+    var out = [];
+    for (var i = 0; i < list.length; i++) {
+      var f = list[i];
+      if (!(/\.pdf$/i.test(f.name) || f.type === "application/pdf")) {
+        out.push({ name: f.name, bytes: (function (f) { return async function () { return new Uint8Array(await f.arrayBuffer()); }; })(f) });
+        continue;
+      }
+      $("bulk-status").textContent = "Opening " + f.name + "…";
+      await loadScript(PDFJS);
+      window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+      var doc = await window.pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
+      for (var p = 1; p <= doc.numPages; p++) out.push({ name: f.name + " page " + p, bytes: (function (doc, p) { return async function () {
+        var page = await doc.getPage(p), v = page.getViewport({ scale: 1 }), scale = 2200 / Math.max(v.width, v.height);
+        v = page.getViewport({ scale: scale });
+        var cv = document.createElement("canvas"); cv.width = Math.round(v.width); cv.height = Math.round(v.height);
+        var ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
+        await page.render({ canvasContext: ctx, viewport: v }).promise;
+        var blob = await new Promise(function (ok) { cv.toBlob(ok, "image/jpeg", 0.9); });
+        return new Uint8Array(await blob.arrayBuffer());
+      }; })(doc, p) });
+    }
+    return out;
+  }
   $("bulk-scan").addEventListener("click", async function () {
     var files = Array.prototype.slice.call($("bulk-files").files), subject = $("bulk-subject").value;
     if (!files.length) { msg("bulk-msg", "Choose the OMR sheet photos first.", "bad"); return; }
@@ -424,15 +448,16 @@
     try {
       if (!OMREngine.isLoaded()) $("bulk-status").textContent = "Loading the scanner (first time only)…";
       await OMREngine.load();
+      files = await expandPdfs(files);   // a centre PDF from KEA becomes one sheet per page
       for (var i = 0; i < files.length; i++) {
         $("bulk-status").textContent = "Reading sheet " + (i + 1) + " of " + files.length + "…";
         await new Promise(function (r) { setTimeout(r, 10); });
         var r;
         try {
-          r = await OMREngine.call("omr_run", new Uint8Array(await files[i].arrayBuffer()), subject, "", true, 72);
+          r = await OMREngine.call("omr_run", await files[i].bytes(), subject, "", true, 72);
           if (r.annotated_b64) { r.image = OMRCrypto.unb64(r.annotated_b64); delete r.annotated_b64; }
         }
-        catch (e) { console.error(e); r = { scan_error: "Could not read this photo" }; }
+        catch (e) { console.error(e); r = { scan_error: "Could not read this sheet" }; }
         r.file = files[i].name; bulk.push(r);
         bar.style.width = ((i + 1) / files.length * 100).toFixed(1) + "%";
         renderBulk();
