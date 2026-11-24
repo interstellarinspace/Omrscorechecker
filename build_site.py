@@ -15,6 +15,8 @@ from urllib.parse import urlparse
 ROOT = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(ROOT, "_site")
 os.environ["STATIC_SITE"] = "1"
+import time  # noqa: E402
+os.environ["BUILD_ID"] = os.environ.get("GITHUB_SHA", "")[:10] or str(int(time.time()))
 site_url = os.environ.get("SITE_URL", "").rstrip("/")
 prefix = urlparse(site_url).path.rstrip("/") if site_url else ""
 
@@ -66,6 +68,8 @@ if os.path.isdir(pub):
 with open(os.path.join(OUT, "static", "omr-bundle.json"), "w", encoding="utf-8") as f:
     f.write(bundle_text)
 open(os.path.join(OUT, ".nojekyll"), "w").close()
+with open(os.path.join(OUT, "static", "build.json"), "w") as f:
+    json.dump({"id": os.environ["BUILD_ID"]}, f)
 with open(os.path.join(OUT, "404.html"), "wb") as f:
     f.write(get("/").replace(b"<h1>", b"<p class=\"err\">That page was not found. You can check your score here.</p><h1>", 1))
 print(f"Built {len(pages) + 1} pages into {OUT} (site URL: {site_url or 'relative'})")

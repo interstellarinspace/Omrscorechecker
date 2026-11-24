@@ -166,6 +166,16 @@
   </nav>
 </header>
 <main>{% block body %}{% endblock %}</main>
+{% if static_site and build_id %}<script>
+// A page kept in the browser's cache from before an update reloads itself once with the new version.
+(function () {
+  fetch("{{ url_for('static', filename='build.json') }}?t=" + Date.now(), { cache: "no-store" }).then(function (r) { return r.json(); }).then(function (b) {
+    if (!b.id || b.id === "{{ build_id }}") return;
+    try { if (sessionStorage.getItem("omr-reloaded") === b.id) return; sessionStorage.setItem("omr-reloaded", b.id); } catch (e) { return; }
+    location.reload();
+  }).catch(function () {});
+})();
+</script>{% endif %}
 <footer class="foot muted">
   <p>OMR Score Check is an independent tool. It is not run by or affiliated with KEA, KPSC or any exam authority.
   Answer keys are the provisional keys published by the exam authority; the final keys and results they announce are what count.</p>

@@ -64,7 +64,7 @@ def asset(filename):
 def inject():
     base = SITE_URL or request.url_root.rstrip("/")
     return {"asset": asset, "cfg": cfg(), "site_url": base, "play_url": PLAY_URL, "appstore_url": APPSTORE_URL,
-            "canonical": base + request.path, "static_site": STATIC_SITE, "github_repo": GITHUB_REPO}
+            "canonical": base + request.path, "static_site": STATIC_SITE, "github_repo": GITHUB_REPO, "build_id": os.environ.get("BUILD_ID", "")}
 
 
 def subject_name(c, sid):

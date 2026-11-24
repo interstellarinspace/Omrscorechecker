@@ -6,7 +6,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var form = $("own-form");
   if (!form) return;
-  var E = window.OMREngine, parsed = null, keyPages = [], how = "sheet", STORE = "omr-own-v1";
+  var E = window.OMREngine, parsed = null, keyPages = [], STORE = "omr-own-v1";
 
   // The page loads the calculator straight away, so it is ready when the student is.
   E.load().catch(function () {});
@@ -131,12 +131,7 @@
   ["own-five", "own-scale"].forEach(function (id) { $(id).addEventListener("change", function () { $("own-skip-wrap").hidden = !$("own-five").checked; summary(); save(); }); });
 
   // ---------- the student's answers ----------
-  $("own-how").addEventListener("click", function (ev) {
-    var b = ev.target.closest("button"); if (!b) return;
-    how = b.dataset.h;
-    Array.prototype.forEach.call(this.children, function (x) { x.classList.toggle("on", x === b); });
-    $("own-sheet-wrap").hidden = how !== "sheet"; $("own-type-wrap").hidden = how !== "type";
-  });
+  // ---------- the student's OMR sheet ----------
   var pickHTML = $("own-pick").innerHTML;
   $("own-sheet").addEventListener("change", function () {
     var f = this.files[0], p = $("own-pick"); if (!f) { p.innerHTML = pickHTML; return; }
@@ -162,13 +157,9 @@
       if (!parsed) { error($("own-key").value.trim() ? $("own-keyinfo").textContent : "Upload the answer key first (step 1)."); return; }
       if (perQ().bad) { error($("own-summary").textContent); return; }
       var sc = scheme(), keys = JSON.stringify(parsed.keys), name = $("own-name").value.trim(), out;
-      if (how === "type") {
-        if (!$("own-answers").value.trim()) { error("Type your answers first (step 3)."); return; }
-        busy(true, "Working out your marks…");
-        out = await E.call("omr_run_custom", new Uint8Array(0), $("own-answers").value, keys, JSON.stringify(sc), name);
-      } else {
+      {
         var f = $("own-sheet").files[0];
-        if (!f) { error("Add a photo or PDF of your OMR sheet (step 3), or choose Type my answers."); return; }
+        if (!f) { error("Upload a photo or PDF of your OMR sheet (step 3)."); return; }
         busy(true, "Reading your sheet…");
         await new Promise(function (r) { setTimeout(r, 30); });
         if (window.OMRPdf.isPdf(f)) {
