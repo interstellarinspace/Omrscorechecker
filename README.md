@@ -103,13 +103,17 @@ publishes it on every push to `main` once Settings > Pages > Source is set to
 `https://<user>.github.io/<repo>/`. Results are not collected centrally on
 this version; use the hosted server (`app.py`) if you need the admin page.
 
-## Admin page on the website (/manage)
+## Admin page on the website (private address)
 
-The GitHub Pages site has its own admin page at `/manage` (linked as "Admin" in the footer). It saves everything as commits to this repository, and the site republishes itself 1 to 2 minutes later.
+The GitHub Pages site has an admin page at an address that is not linked anywhere, not in the sitemap and marked noindex. The address is in `admin_page_path.txt`. To keep the address out of this public code as well, add a GitHub Actions secret `ADMIN_PAGE_PATH` with a new value (letters, digits, - or _, 8+ characters); the site then uses that address instead.
 
-- **Connect:** create a fine-grained GitHub token (github.com › Settings › Developer settings › Fine-grained tokens) with access to only this repository and *Contents: Read and write*. Paste it on the admin page. It is kept in the browser only.
-- **Answer keys:** paste a whole table (`Q A1 B1 C1 D1`, rows you leave out keep their saved answer) or one set's key. Saved to `keys/<subject>/<set>.txt`.
-- **Subjects:** add a new paper that uses the same OMR sheet. Saved to `config.json`. It gets its own answer-key page, tab and dropdown entry.
-- **Bulk scan & publish:** pick a subject and select many sheet photos. They are read in the browser (not uploaded). Check or correct the register and booklet numbers, add names if you want, download a CSV, and publish.
+The address is only a convenience. The real protection is:
+- **GitHub token** (fine-grained, this repository only, *Contents: Read and write*): needed to change anything.
+- **Admin passphrase** (set on first sign-in): the marked OMR sheets and the admin's results list are encrypted with it (AES-GCM, PBKDF2 310,000 rounds) in `admin/`. Without it nobody, including GitHub, can read them. It cannot be recovered if lost.
 
-Published results live in `published/results/`. Each file is encrypted (AES-GCM) with a key derived (PBKDF2, 150,000 rounds) from the candidate's register number plus booklet number, and its file name comes from the same derivation. There is no list of results. A candidate opens `/results`, types both numbers, and sees their marks, score card PDF and share buttons.
+Tabs:
+- **Bulk OMR upload:** pick a subject, select many sheet photos (read in the browser), check or fix register and booklet numbers and names, download a CSV, and publish. Publishing saves each candidate's encrypted result for the public Results page and each marked OMR sheet, encrypted, for the admin.
+- **Search by register no.:** find a candidate by register number (or part of it), booklet number or name, and see their marks and attached OMR sheet.
+- **Answer keys** and **Subjects:** as before; saved to `keys/` and `config.json`.
+
+Published results live in `published/results/`. Each file is encrypted with a key derived (PBKDF2, 150,000 rounds) from the candidate's register number plus booklet number, and its file name comes from the same derivation. There is no public list of results. A candidate opens `/results`, types both numbers, and sees their marks, score card PDF and share buttons.

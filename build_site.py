@@ -34,7 +34,9 @@ def get(path):
     return r.data
 
 
-pages = {"/": "index.html", "/results": "results.html", "/manage": "manage.html", "/privacy": "privacy.html", "/sitemap.xml": "sitemap.xml", "/robots.txt": "robots.txt"}
+pages = {"/": "index.html", "/results": "results.html", "/privacy": "privacy.html", "/sitemap.xml": "sitemap.xml", "/robots.txt": "robots.txt"}
+if A.ADMIN_PAGE:   # unlinked admin page
+    pages["/" + A.ADMIN_PAGE] = A.ADMIN_PAGE + ".html"
 for s in cfg["subjects"]:
     pages[f"/kreis-2026/{s['slug']}"] = f"kreis-2026/{s['slug']}.html"   # Pages serves /x for x.html
 for path, name in pages.items():

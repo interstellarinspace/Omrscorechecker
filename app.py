@@ -10,6 +10,7 @@ import base64
 import csv
 import datetime as dt
 import os
+import re
 import secrets
 
 import cv2
@@ -175,7 +176,7 @@ def answer_key(subject):
 @app.route("/robots.txt")
 def robots():
     base = SITE_URL or request.url_root.rstrip("/")
-    body = f"User-agent: *\nDisallow: /admin\nDisallow: /manage\nDisallow: /api/\nDisallow: /published/\nAllow: /\n\nSitemap: {base}/sitemap.xml\n"
+    body = f"User-agent: *\nDisallow: /admin\nDisallow: /api/\nDisallow: /published/\nAllow: /\n\nSitemap: {base}/sitemap.xml\n"
     return app.response_class(body, mimetype="text/plain")
 
 
@@ -200,10 +201,23 @@ def published_file(path):
     return send_from_directory(os.path.join(K.ROOT, "published"), path)
 
 
-@app.route("/manage")
 def manage():
     """Admin page for the GitHub Pages site: keys, subjects, bulk scanning (saves to the GitHub repo)."""
     return render_template("manage.html", cfg=cfg())
+
+
+# The admin page lives at an address that is not linked anywhere. Set ADMIN_PAGE_PATH (a GitHub
+# Actions secret) to override the address kept in admin_page_path.txt.
+def _admin_path():
+    p = os.environ.get("ADMIN_PAGE_PATH", "").strip().strip("/")
+    if not p and os.path.exists(os.path.join(K.ROOT, "admin_page_path.txt")):
+        p = open(os.path.join(K.ROOT, "admin_page_path.txt"), encoding="utf-8").read().strip().strip("/")
+    return p if re.fullmatch(r"[A-Za-z0-9_-]{8,80}", p or "") else ""
+
+
+ADMIN_PAGE = _admin_path()
+if ADMIN_PAGE:
+    app.add_url_rule("/" + ADMIN_PAGE, "manage", manage)
 
 
 @app.route("/app/")

@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Admin | {{ cfg.site_name }}{% endblock %}
+{% block meta %}<meta name="robots" content="noindex, nofollow, noarchive"><meta name="referrer" content="no-referrer">{% endblock %}
 {% block body %}
 <style>
   .tabbar { display:flex; gap:8px; margin-bottom:16px; overflow-x:auto; }
@@ -14,23 +15,35 @@
   .radios { display:flex; gap:16px; flex-wrap:wrap; } .radios label { font-weight:500; display:flex; gap:6px; align-items:center; margin:6px 0; }
   .check { display:flex; gap:8px; align-items:center; font-weight:500; }
   .check input { width:auto; }
+  .cand { border:1px solid var(--line); border-radius:14px; padding:14px; margin-top:12px; background:#fcfcff; }
+  .cand-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:8px; }
+  .cand-score { font-size:1.7rem; font-weight:800; color:#3b2fc9; white-space:nowrap; } .cand-score small { font-size:.9rem; color:var(--muted); font-weight:600; }
+  .row2 .btn + .btn { margin-top:0; }
 </style>
 <div class="hero"><h1>Admin</h1><p>Add answer keys and subjects, and publish marks from many OMR sheets at once. Changes are saved to the website's GitHub repository and show on the site about 1 to 2 minutes later.</p></div>
 
 <section class="card" id="connect-card">
-  <h2>1. Connect to GitHub</h2>
+  <h2>Sign in</h2>
+  <p class="muted">This page is not linked anywhere on the site and is hidden from search engines. Even if someone finds the address, they can't change anything without your GitHub token, and they can't see the OMR sheets without your admin passphrase.</p>
   <label for="gh-repo">Repository</label>
   <input type="text" id="gh-repo" placeholder="owner/repository">
   <label for="gh-token">GitHub access token</label>
   <input type="password" id="gh-token" placeholder="github_pat_…" autocomplete="off">
-  <label class="check"><input type="checkbox" id="gh-remember"> Remember on this device</label>
+  <label for="vault-pass">Admin passphrase</label>
+  <input type="password" id="vault-pass" autocomplete="off" placeholder="Locks the OMR sheets and the results list">
+  <div id="vault-new" hidden>
+    <p class="note">No admin passphrase has been set yet. Choose one now (at least 10 characters) and type it again. Write it down: without it the saved OMR sheets can't be opened, and nobody can recover it.</p>
+    <label for="vault-pass2">Type the passphrase again</label>
+    <input type="password" id="vault-pass2" autocomplete="off">
+  </div>
+  <label class="check"><input type="checkbox" id="gh-remember"> Remember the token on this device (the passphrase is never stored)</label>
   <p></p>
-  <button class="btn" id="gh-connect" type="button">Connect</button>
+  <button class="btn" id="gh-connect" type="button">Sign in</button>
   <p class="muted" id="gh-status"></p>
-  <button class="btn secondary" id="gh-forget" type="button" hidden>Disconnect and forget the token</button>
+  <button class="btn secondary" id="gh-forget" type="button" hidden>Sign out and forget the token</button>
   <details><summary>How do I get a token?</summary>
     <ol class="muted">
-      <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub › Settings › Fine-grained tokens › Generate new token</a>.</li>
+      <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub › Settings › Fine-grained tokens › Generate new token</a>.</li>
       <li>Repository access: <b>Only select repositories</b>, and pick this website's repository.</li>
       <li>Permissions › Repository permissions › <b>Contents: Read and write</b>.</li>
       <li>Generate, copy the token and paste it above. Keep it secret: anyone with it can change the website.</li>
@@ -40,12 +53,13 @@
 
 <div id="admin" hidden>
   <div class="tabbar" role="tablist">
-    <button type="button" class="on" data-tab="tab-keys">Answer keys</button>
+    <button type="button" class="on" data-tab="tab-bulk">Bulk OMR upload</button>
+    <button type="button" data-tab="tab-search">Search by register no.</button>
+    <button type="button" data-tab="tab-keys">Answer keys</button>
     <button type="button" data-tab="tab-subjects">Subjects</button>
-    <button type="button" data-tab="tab-bulk">Bulk scan &amp; publish</button>
   </div>
 
-  <section class="card tab" id="tab-keys">
+  <section class="card tab" id="tab-keys" hidden>
     <h2>Answer keys</h2>
     <div class="scroll"><table class="grid-keys" id="keys-status"></table></div>
     <p class="muted">Number of answers saved for each subject and set.</p>
@@ -66,6 +80,16 @@
     <p id="key-msg"></p>
   </section>
 
+  <section class="card tab" id="tab-search" hidden>
+    <h2>Search by register number</h2>
+    <form id="search-form" class="row2" style="grid-template-columns:1fr auto">
+      <input type="text" id="search-q" placeholder="Register number (or part of it), or name">
+      <button class="btn" type="submit" style="width:auto;padding:12px 18px">Search</button>
+    </form>
+    <p class="muted" id="search-info"></p>
+    <div id="search-results"></div>
+  </section>
+
   <section class="card tab" id="tab-subjects" hidden>
     <h2>Subjects (papers)</h2>
     <div class="scroll"><table id="subj-table"></table></div>
@@ -80,9 +104,9 @@
     <p id="subj-msg"></p>
   </section>
 
-  <section class="card tab" id="tab-bulk" hidden>
-    <h2>Bulk scan &amp; publish</h2>
-    <p class="muted">Choose the subject, then select all the OMR sheet photos for that subject. Sheets are read on this computer; photos are not uploaded. Check the register and booklet numbers, then publish. Candidates see their marks on the <a href="{{ url_for('results_page') }}">Results page</a> by typing both numbers.</p>
+  <section class="card tab" id="tab-bulk">
+    <h2>Bulk OMR upload</h2>
+    <p class="muted">Choose the subject, then select all the OMR sheet photos for that subject. Sheets are read on this computer. Check the register and booklet numbers, then publish. Publishing does two things: candidates can see their marks on the <a href="{{ url_for('results_page') }}">Results page</a> by typing both numbers, and each marked OMR sheet is saved, locked with your passphrase, so you can find it later under Search by register no.</p>
     <label for="bulk-subject">Subject</label>
     <select id="bulk-subject"></select>
     <label>OMR sheet photos</label>

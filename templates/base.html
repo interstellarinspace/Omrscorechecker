@@ -116,7 +116,7 @@
   <p><a href="{{ url_for('index') }}">Check your score</a> ·
   {% for s in cfg.subjects %}<a href="{{ url_for('answer_key', subject=s.slug) }}">{{ s.name }} answer key</a> · {% endfor %}
   <a href="{{ url_for('results_page') }}">Results by register number</a> ·
-  <a href="{{ url_for('privacy') }}">Privacy</a> · <a href="{{ url_for('manage') }}" rel="nofollow">Admin</a></p>
+  <a href="{{ url_for('privacy') }}">Privacy</a></p>
 </footer>
 <script>
   // Back: inside the score checker it returns from the result to the form; elsewhere it goes

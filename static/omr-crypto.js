@@ -28,5 +28,32 @@
     var pt = await crypto.subtle.decrypt({ name: "AES-GCM", iv: unb64(f.iv) }, key, unb64(f.ct));
     return JSON.parse(new TextDecoder().decode(pt));
   }
-  window.OMRCrypto = { derive: derive, seal: seal, open: open, digits: digits };
+
+  // ---- admin vault: OMR sheet images and the admin's results index, locked with the admin passphrase ----
+  var VAULT_ITER = 310000, CHECK = "omr-admin-vault-ok";
+  async function vaultKey(passphrase, saltB64) {
+    var base = await crypto.subtle.importKey("raw", enc.encode(passphrase), "PBKDF2", false, ["deriveKey"]);
+    return crypto.subtle.deriveKey({ name: "PBKDF2", hash: "SHA-256", salt: unb64(saltB64), iterations: VAULT_ITER }, base,
+      { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+  }
+  async function sealBytes(key, bytes) {
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    var ct = new Uint8Array(await crypto.subtle.encrypt({ name: "AES-GCM", iv: iv }, key, bytes));
+    var out = new Uint8Array(12 + ct.length); out.set(iv); out.set(ct, 12); return out;
+  }
+  async function openBytes(key, bytes) {
+    return new Uint8Array(await crypto.subtle.decrypt({ name: "AES-GCM", iv: bytes.subarray(0, 12) }, key, bytes.subarray(12)));
+  }
+  async function newVault(passphrase) {
+    var salt = b64(crypto.getRandomValues(new Uint8Array(16)));
+    var key = await vaultKey(passphrase, salt);
+    return { key: key, file: JSON.stringify({ v: 1, salt: salt, check: b64(await sealBytes(key, enc.encode(CHECK))) }) };
+  }
+  async function unlockVault(fileText, passphrase) {
+    var f = JSON.parse(fileText), key = await vaultKey(passphrase, f.salt);
+    try { if (new TextDecoder().decode(await openBytes(key, unb64(f.check))) === CHECK) return key; } catch (e) {}
+    return null;
+  }
+  window.OMRCrypto = { derive: derive, seal: seal, open: open, digits: digits, b64: b64, unb64: unb64,
+    sealBytes: sealBytes, openBytes: openBytes, newVault: newVault, unlockVault: unlockVault };
 })();
