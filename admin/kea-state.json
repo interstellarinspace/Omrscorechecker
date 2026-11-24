@@ -488,21 +488,57 @@
   "PDP26|BENGALURU|General Knowledge Paper (RPC)|166": {
    "sheets": 0,
    "note": "no file"
+  },
+  "PDP26|RAICHUR|General Knowledge Paper (RPC)|232": {
+   "sheets": 290,
+   "published": 264,
+   "failed": 26,
+   "centre": "HAMDARD PU COLLEGE ,BEROON QUILLA, NAWRANGA DARWAZ, TARANATH ROAD",
+   "district": "RAICHUR",
+   "code": "232",
+   "reader": "80d287e019",
+   "read": "2026-11-24T12:12:54Z"
   }
  },
  "failures": [
-  "Skipped KEA subject 'Compulsory Kannada': no matching subject in Warder."
+  "Skipped KEA subject 'Compulsory Kannada': no matching subject in Warder.",
+  "RAICHUR centre 232 page 8: version code not read",
+  "RAICHUR centre 232 page 74: version code not read",
+  "RAICHUR centre 232 page 87: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
+  "RAICHUR centre 232 page 98: version code not read",
+  "RAICHUR centre 232 page 112: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
+  "RAICHUR centre 232 page 163: version code not read",
+  "RAICHUR centre 232 page 167: version code not read",
+  "RAICHUR centre 232 page 175: version code not read",
+  "RAICHUR centre 232 page 183: version code not read",
+  "RAICHUR centre 232 page 184: version code not read",
+  "RAICHUR centre 232 page 190: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
+  "RAICHUR centre 232 page 196: version code not read",
+  "RAICHUR centre 232 page 221: version code not read",
+  "RAICHUR centre 232 page 251: version code not read",
+  "RAICHUR centre 232 page 269: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
+  "RAICHUR centre 232 page 281: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
+  "RAICHUR centre 232 page 282: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
+  "RAICHUR centre 232 page 284: version code not read",
+  "RAICHUR centre 232 page 290: Could not find the rows of small blue dashes along both side edges of the sheet.",
+  "RAICHUR centre 232 page 23: register number does not match the rest of the centre (check it)",
+  "RAICHUR centre 232 page 32: register number does not match the rest of the centre (check it)",
+  "RAICHUR centre 232 page 35: register number does not match the rest of the centre (check it)",
+  "RAICHUR centre 232 page 179: register number does not match the rest of the centre (check it)",
+  "RAICHUR centre 232 page 182: register number does not match the rest of the centre (check it)",
+  "RAICHUR centre 232 page 210: register number does not match the rest of the centre (check it)",
+  "RAICHUR centre 232 page 228: register number does not match the rest of the centre (check it)"
  ],
  "totals": {
-  "centres": 0,
-  "sheets": 0,
-  "published": 0,
-  "failed": 0
+  "centres": 1,
+  "sheets": 290,
+  "published": 264,
+  "failed": 26
  },
  "status": "running",
- "message": "Fetching…",
+ "message": "Working on RAICHUR, General Knowledge Paper (RPC), centre 232.",
  "started": "2026-11-24T11:08:06Z",
- "updated": "2026-11-24T12:05:32Z",
+ "updated": "2026-11-24T12:12:54Z",
  "retry": 6,
  "kea_exam_name": "PRISON DEPARTMENT RECRUITMENT (RPC)-2026 and COMPULSORY KANNADA EXAMINATION -2026 (21/11/2026)",
  "districts": [
