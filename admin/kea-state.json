@@ -1,15 +1,28 @@
 {
- "request": "2026-11-24T09:01:18.970Z",
+ "request": "2026-11-24T09:07:33.826Z",
  "done": {},
- "failures": [],
+ "failures": [
+  "Waiting for the Paper I: General Knowledge answer key (sets A1, B1, C1, D1). Add it, and the next run fetches this subject.",
+  "Skipped KEA subject 'Compulsory Kannada': no matching subject in Warder."
+ ],
  "totals": {
   "centres": 0,
   "sheets": 0,
   "published": 0,
   "failed": 0
  },
- "status": "error",
- "message": "Photo reading is off for Warder. In the admin page, Exams & subjects, press Turn on next to Warder (if it uses the KEA OMR sheet), then start the fetch again.",
- "started": "2026-11-24T09:01:44Z",
- "updated": "2026-11-24T09:01:44Z"
+ "status": "paused",
+ "message": "Fetched everything that has an answer key. Some subjects are waiting for their key (see the problems list). Add the key and press Start fetching again.",
+ "started": "2026-11-24T09:07:58Z",
+ "updated": "2026-11-24T09:11:04Z",
+ "kea_exam_name": "PRISON DEPARTMENT RECRUITMENT (RPC)-2026 and COMPULSORY KANNADA EXAMINATION -2026 (21/11/2026)",
+ "districts": [
+  "RAICHUR",
+  "KALABURAGI",
+  "BELAGAVI",
+  "BENGALURU",
+  "DAVANAGERE",
+  "DHARWAD",
+  "BALLARI"
+ ]
 }
