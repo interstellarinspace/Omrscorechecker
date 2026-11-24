@@ -390,7 +390,9 @@ def git(*args, check=True):
 
 
 def save(message, push=True):
-    git("add", "-A", "published", "admin")
+    paths = [p for p in ("published", "admin") if os.path.exists(rel(p))]
+    if paths:
+        git("add", "-A", *paths)
     if not git("diff", "--cached", "--quiet", check=False).returncode:
         return
     git("commit", "-m", message)
@@ -438,6 +440,9 @@ def run(args):
         state.update(status="error", message="Sign in to the admin page once (it sets up the key the fetch needs), then start the fetch again.")
         write_json(STATE, state); save("KEA fetch: waiting for admin key", push=not args.no_push)
         return 1
+
+    write_json(STATE, state)
+    save("KEA fetch: started", push=not args.no_push)   # so the admin page shows the new fetch at once
 
     cfg = K.load_config()
     exam = next((e for e in cfg["exams"] if e["id"] == req.get("exam")), None)

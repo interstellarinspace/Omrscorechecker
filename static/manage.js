@@ -779,6 +779,7 @@
       var st = await readFile(KEA_STATE), req = await readFile(KEA_REQ);
       if (!st) { $("kea-status").innerHTML = "<p class='muted'>" + (req ? "Waiting for GitHub to start." : "No fetch has been started yet.") + "</p>"; return; }
       st = JSON.parse(st); req = req ? JSON.parse(req) : {};
+      if (req.id && st.request !== req.id && !req.stop) { $("kea-status").innerHTML = "<p><b>Starting</b><br>GitHub is starting the new fetch (" + esc(req.kea_exam || "") + "). Press Refresh progress again in a minute.</p>"; return; }
       var t = st.totals || {}, label = { running: "Running", paused: "Paused, carries on in the next run", blocked: "KEA is limiting requests, will try again later",
         captcha: "Stopped: KEA asked for a captcha", done: "Finished", error: "Stopped with a problem" }[st.status] || st.status;
       if (req.stop) label += " (stop requested)";
