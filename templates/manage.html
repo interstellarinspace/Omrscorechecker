@@ -168,9 +168,10 @@
   </section>
 </div>
 {% include "_site_js.html" %}
-<script>window.OMR_BUNDLE = "{{ url_for('static', filename='omr-bundle.json') }}";</script>
+<script>window.OMR_BUNDLE = "{{ asset('omr-bundle.json') }}";</script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
-<script src="{{ url_for('static', filename='omr-engine.js') }}"></script>
-<script src="{{ url_for('static', filename='omr-crypto.js') }}"></script>
-<script src="{{ url_for('static', filename='manage.js') }}"></script>
+<script src="{{ asset('omr-engine.js') }}"></script>
+<script src="{{ asset('omr-crypto.js') }}"></script>
+<script src="{{ asset('manage.js') }}"></script>
+<p class="muted" style="text-align:right">Admin page version {{ asset('manage.js').split('v=')[-1] }}</p>
 {% endblock %}

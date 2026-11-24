@@ -4,5 +4,5 @@
 {% include "_result.html" %}
 {% include "_site_js.html" %}
 <script>window.OMR_RESULT = {{ dict(r, marking=cfg.marking, five=cfg.not_attempted_option)|tojson }};</script>
-<script src="{{ url_for('static', filename='result-view.js') }}"></script>
+<script src="{{ asset('result-view.js') }}"></script>
 {% endblock %}

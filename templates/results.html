@@ -33,10 +33,10 @@
 {% include "_result.html" %}
 <p class="muted">Don't see your marks? You can still <a href="{{ url_for('index') }}">check your score from a photo of your OMR sheet</a>.</p>
 {% include "_site_js.html" %}
-<script src="{{ url_for('static', filename='omr-crypto.js') }}"></script>
-<script src="{{ url_for('static', filename='result-view.js') }}"></script>
+<script src="{{ asset('omr-crypto.js') }}"></script>
+<script src="{{ asset('result-view.js') }}"></script>
 <script>window.OMR_EXAMS = {{ exams_for_form|tojson }};</script>
-<script src="{{ url_for('static', filename='exam-picker.js') }}"></script>
+<script src="{{ asset('exam-picker.js') }}"></script>
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };

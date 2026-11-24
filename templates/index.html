@@ -83,13 +83,13 @@
   <p>{% if static_site %}On this site your photo is checked inside your own browser and is never uploaded anywhere.{% else %}Your photo is used only to calculate your score and is seen only by the site administrator. It is never sold or shared.{% endif %} See the <a href="{{ url_for('privacy') }}">privacy policy</a>.</p>
 </section>
 {% if static_site %}{% include "_site_js.html" %}
-<script>window.OMR_BUNDLE = "{{ url_for('static', filename='omr-bundle.json') }}";</script>
-<script src="{{ url_for('static', filename='result-view.js') }}"></script>
+<script>window.OMR_BUNDLE = "{{ asset('omr-bundle.json') }}";</script>
+<script src="{{ asset('result-view.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
-<script src="{{ url_for('static', filename='omr-engine.js') }}"></script>
-<script src="{{ url_for('static', filename='browser-scan.js') }}"></script>{% endif %}
+<script src="{{ asset('omr-engine.js') }}"></script>
+<script src="{{ asset('browser-scan.js') }}"></script>{% endif %}
 <script>window.OMR_EXAMS = {{ exams_for_form|tojson }};</script>
-<script src="{{ url_for('static', filename='exam-picker.js') }}"></script>
+<script src="{{ asset('exam-picker.js') }}"></script>
 <script>
   OMRPicker({ check: true });
   document.getElementById('sheet').addEventListener('change', function () {

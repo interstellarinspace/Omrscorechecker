@@ -43,6 +43,16 @@ for e in cfg.get("exams", []):
 for s in cfg["subjects"]:
     ex = slugs.get(s.get("exam"), "kreis-2026")
     pages[f"/{ex}/{s['slug']}"] = f"{ex}/{s['slug']}.html"   # Pages serves /x for x.html
+# Build the scanner bundle first, so pages can link it with a version that changes with the keys
+import hashlib  # noqa: E402
+bundle = {}
+for rel in ["config.json", "omr/__init__.py", "omr/scanner.py", "omr/keys.py"] + \
+        [os.path.relpath(p, ROOT) for p in glob.glob(os.path.join(ROOT, "keys", "*", "*.txt"))]:
+    with open(os.path.join(ROOT, rel), encoding="utf-8") as f:
+        bundle[rel.replace(os.sep, "/")] = f.read()
+bundle_text = json.dumps(bundle, sort_keys=True)
+A._asset_versions["omr-bundle.json"] = hashlib.md5(bundle_text.encode()).hexdigest()[:8]
+
 for path, name in pages.items():
     dest = os.path.join(OUT, name)
     os.makedirs(os.path.dirname(dest), exist_ok=True)
@@ -53,14 +63,8 @@ shutil.copytree(os.path.join(ROOT, "static"), os.path.join(OUT, "static"))
 pub = os.path.join(ROOT, "published")
 if os.path.isdir(pub):
     shutil.copytree(pub, os.path.join(OUT, "published"))
-# Everything the in-browser scanner needs, in one file
-bundle = {}
-for rel in ["config.json", "omr/__init__.py", "omr/scanner.py", "omr/keys.py"] + \
-        [os.path.relpath(p, ROOT) for p in glob.glob(os.path.join(ROOT, "keys", "*", "*.txt"))]:
-    with open(os.path.join(ROOT, rel), encoding="utf-8") as f:
-        bundle[rel.replace(os.sep, "/")] = f.read()
 with open(os.path.join(OUT, "static", "omr-bundle.json"), "w", encoding="utf-8") as f:
-    json.dump(bundle, f)
+    f.write(bundle_text)
 open(os.path.join(OUT, ".nojekyll"), "w").close()
 with open(os.path.join(OUT, "404.html"), "wb") as f:
     f.write(get("/").replace(b"<h1>", b"<p class=\"err\">That page was not found. You can check your score here.</p><h1>", 1))

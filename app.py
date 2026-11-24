@@ -44,10 +44,26 @@ def cfg():
     return K.load_config()
 
 
+_asset_versions = {}
+
+
+def asset(filename):
+    """Static file URL with a content hash, so browsers load the new file after each update."""
+    if filename not in _asset_versions:
+        import hashlib
+        try:
+            with open(os.path.join(app.static_folder, filename), "rb") as f:
+                _asset_versions[filename] = hashlib.md5(f.read()).hexdigest()[:8]
+        except OSError:
+            _asset_versions[filename] = ""
+    v = _asset_versions[filename]
+    return url_for("static", filename=filename, v=v) if v else url_for("static", filename=filename)
+
+
 @app.context_processor
 def inject():
     base = SITE_URL or request.url_root.rstrip("/")
-    return {"cfg": cfg(), "site_url": base, "play_url": PLAY_URL, "appstore_url": APPSTORE_URL,
+    return {"asset": asset, "cfg": cfg(), "site_url": base, "play_url": PLAY_URL, "appstore_url": APPSTORE_URL,
             "canonical": base + request.path, "static_site": STATIC_SITE, "github_repo": GITHUB_REPO}
 
 
