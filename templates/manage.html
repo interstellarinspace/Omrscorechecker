@@ -48,8 +48,9 @@
   <details><summary>How do I get a token?</summary>
     <ol class="muted">
       <li>Open <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub › Settings › Fine-grained tokens › Generate new token</a>.</li>
-      <li>Repository access: <b>Only select repositories</b>, and pick this website's repository.</li>
-      <li>Permissions › Repository permissions › <b>Contents: Read and write</b>.</li>
+      <li>Resource owner: your account. Repository access: <b>Only select repositories</b>, and pick this website's repository.</li>
+      <li>Permissions › Repository permissions › <b>Contents</b> › change "Read-only" to <b>Read and write</b>. (Metadata: Read-only is added by itself. Nothing else is needed.)</li>
+      <li>Already made a token? Open it under Fine-grained tokens, press <b>Edit</b>, fix the two settings above and save. The token text stays the same.</li>
       <li>Generate, copy the token and paste it above. Keep it secret: anyone with it can change the website.</li>
     </ol>
   </details>

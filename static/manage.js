@@ -26,7 +26,12 @@
     });
     if (!res.ok) {
       var detail = ""; try { detail = (await res.json()).message || ""; } catch (e) {}
-      var err = new Error("GitHub said " + res.status + (detail ? ": " + detail : "")); err.status = res.status; throw err;
+      var text = "GitHub said " + res.status + (detail ? ": " + detail : "");
+      if (res.status === 403 && /not accessible by (personal access|integration)/i.test(detail))
+        text = (opts.method && opts.method !== "GET")
+          ? "Your token can read the repository but is not allowed to save to it. Edit the token on GitHub and set Repository permissions › Contents to \"Read and write\" (and make sure this repository is selected), then sign in again."
+          : "Your token has no access to this repository. Edit the token on GitHub: under Repository access choose \"Only select repositories\" and add " + S.repo + ", set Contents to \"Read and write\", then sign in again.";
+      var err = new Error(text); err.status = res.status; throw err;
     }
     return res.status === 204 ? null : res.json();
   }
@@ -75,6 +80,8 @@
       var info = await gh("");
       if (info.permissions && !info.permissions.push) throw new Error("This token can read the repository but not change it. Give it Contents: Read and write.");
       S.branch = info.default_branch || "main";
+      // Check now that the token may save (creates a tiny unused blob), so a missing permission shows at sign-in.
+      await gh("/git/blobs", { method: "POST", body: { content: "omr-admin-write-check", encoding: "utf-8" } });
       await loadTree();
       if (!S.tree[VAULT]) {
         if ($("vault-new").hidden) { $("vault-new").hidden = false; msg("gh-status", "Choose your admin passphrase below, then press Sign in again.", "warn"); return; }
