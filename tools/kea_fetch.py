@@ -39,6 +39,7 @@ VAULT = "admin/vault.json"
 ALLOWED_HOST = re.compile(r"(^|\.)karnataka\.gov\.in$")
 SALT = b"omr-score-check/results/v1"
 ITER = 150000
+KEA_CODES = {"kreis": "KREISREC26", "warder": "PDP26"}   # usual KEA exam for each exam on this site
 WAITS = (120, 300, 900, 1800)   # seconds to wait after each "too many requests"
 UA = "Mozilla/5.0 (compatible; OMRScoreCheck/1.0; slow single-request fetcher)"
 
@@ -465,6 +466,9 @@ def run(args):
         want = str(req.get("kea_exam", "")).strip().lower()
         ex = [o for o in options(site.page, "ddlExam") if o[0].lower() == want] or \
              [o for o in options(site.page, "ddlExam") if want and want in o[1].lower()]
+        if not ex:  # older admin pages sent a typed name: fall back to the usual KEA exam for this exam
+            code = exam.get("kea_code") or KEA_CODES.get(exam["id"])
+            ex = [o for o in options(site.page, "ddlExam") if o[0] == code]
         if not ex:
             stop("error", "Could not find that exam on the KEA page. Exams listed there: " +
                  "; ".join(f"{v} = {t}" for v, t in options(site.page, "ddlExam")))

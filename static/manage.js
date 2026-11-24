@@ -746,17 +746,30 @@
   async function keaRequest(stop) {
     var url = $("kea-url").value.trim();
     if (!stop && !/^https:\/\/([\w-]+\.)*karnataka\.gov\.in\//i.test(url)) throw new Error("Paste a KEA link starting with https:// on karnataka.gov.in.");
-    var req = { id: new Date().toISOString(), url: url, exam: $("kea-exam").value, kea_exam: $("kea-code").value.trim(),
+    var req = { id: new Date().toISOString(), url: url, exam: $("kea-exam").value, kea_exam: $("kea-code").value,
       districts: $("kea-districts").value.split(/[,;\n]+/).map(function (d) { return d.trim().toUpperCase(); }).filter(Boolean), stop: !!stop };
     if (stop) { var old = await readFile(KEA_REQ); if (old) { old = JSON.parse(old); old.stop = true; req = old; } }
     await commit({ "admin/kea-request.json": JSON.stringify(req, null, 1) + "\n" }, stop ? "Stop the KEA fetch" : "Start a KEA fetch: " + req.kea_exam);
   }
+  // Which KEA exam each exam on this site usually is. Picking the exam picks the KEA exam too.
+  var KEA_CODES = { kreis: "KREISREC26", warder: "PDP26" };
+  $("kea-exam").addEventListener("change", function () {
+    var ex = (S.cfg.exams || []).filter(function (e) { return e.id === $("kea-exam").value; })[0] || {};
+    var code = ex.kea_code || KEA_CODES[ex.id]; if (code && $("kea-code").querySelector('option[value="' + code + '"]')) $("kea-code").value = code;
+  });
   $("kea-start").addEventListener("click", async function () {
     var btn = this; btn.disabled = true;
     try {
-      if (!$("kea-code").value.trim()) throw new Error("Enter the exam as it is called on the KEA page, e.g. KREISREC26.");
+      var ex = (S.cfg.exams || []).filter(function (e) { return e.id === $("kea-exam").value; })[0] || {};
+      if (ex.omr_layout !== "kea_kreis") {
+        await useKeaSheet(ex.id, "kea-msg");
+        ex = (S.cfg.exams || []).filter(function (e) { return e.id === $("kea-exam").value; })[0] || {};
+        if (ex.omr_layout !== "kea_kreis") throw new Error("Photo reading must be on for " + ex.name + " before its sheets can be fetched.");
+      }
+      var keyless = S.cfg.subjects.filter(function (s) { return s.exam === ex.id && !keyCount(s.id).some(function (k) { return k > 0; }); });
+      if (keyless.length) msg("kea-msg", "Note: no answer key yet for " + keyless.map(function (s) { return s.name; }).join(", ") + ". Those subjects wait until their key is added.", "warn");
       await keaRequest(false);
-      msg("kea-msg", "Started. GitHub begins in about a minute. Press Refresh progress from time to time; you can also close this page.", "ok");
+      msg("kea-msg", (keyless.length ? "Started (subjects without a key will wait). " : "Started. ") + "GitHub begins in about a minute. Press Refresh progress from time to time; you can also close this page.", "ok");
     } catch (e) { console.error(e); msg("kea-msg", e.message, "bad"); }
     finally { btn.disabled = false; }
   });
