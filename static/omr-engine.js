@@ -132,10 +132,6 @@
     "    out['marking'] = {k: sc.get(k, 0) for k in ('correct', 'wrong', 'skipped', 'blank', 'multiple')}",
     "    out['five'] = sc.get('five') or '5'",
     "    out['answers_text'] = ' '.join(a['answer'] if a['status'] == 'ok' else ('*' if a['status'] == 'multiple' else '0') for a in answers)",
-    "    if res is not None:",
-    "        img = S.annotate(res, out['grading'])",
-    "        ok, buf = cv2.imencode('.jpg', img, [cv2.IMWRITE_JPEG_QUALITY, 85])",
-    "        out['annotated_b64'] = base64.b64encode(buf.tobytes()).decode()",
     "    return json.dumps(out)",
     "def omr_key_text(js):",
     "    return K.key_to_text({int(q): a for q, a in json.loads(js).items()}) + '\\n'"

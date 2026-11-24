@@ -28,7 +28,7 @@
   var timer = null;
   async function parseKey() {
     var text = $("own-key").value;
-    if (!text.trim()) { parsed = null; $("own-keyinfo").className = "muted small"; $("own-keyinfo").textContent = "Answers can be 1 to 5 or A to E. Write X for a dropped question (everyone gets its marks), and 2/3 when two answers are accepted."; sets(); summary(); return; }
+    if (!text.trim()) { parsed = null; $("own-keyinfo").className = "muted small"; $("own-keyinfo").textContent = "Upload the answer key as a photo or PDF of the key table (one column per set, like KEA's key)."; sets(); summary(); return; }
     if (!E.isLoaded()) $("own-keyinfo").textContent = "Getting the calculator ready (first time only)…";
     var r = await E.call("omr_custom_key", text, nq());
     var info = $("own-keyinfo");
@@ -43,7 +43,6 @@
     sets(); summary(); save();
   }
   function keyChanged() { clearTimeout(timer); timer = setTimeout(function () { parseKey().catch(console.error); }, 400); }
-  $("own-key").addEventListener("input", keyChanged);
 
   function sets() {
     var many = parsed && parsed.sets.length > 1, sel = $("own-set"), was = sel.value;
@@ -67,20 +66,22 @@
         var r = await E.call("omr_custom_key_page", await imgs[i].bytes());
         if (!r.error) keyPages.push({ page: imgs[i].page, text: r.text, unsure: r.unsure, rows: r.rows });
       }
-      if (!keyPages.length) { $("own-keyinfo").className = "bad small"; $("own-keyinfo").textContent = "Could not find an answer key table in this file. Type or paste the key instead."; return; }
+      if (!keyPages.length) { $("own-keyinfo").className = "bad small"; $("own-keyinfo").textContent = "Could not find an answer key table in this file. Try a clearer photo or the key PDF."; return; }
       $("own-keypage-wrap").hidden = keyPages.length < 2;
       $("own-keypage").innerHTML = keyPages.map(function (p, i) { return '<option value="' + i + '">Page ' + p.page + " (" + p.rows + " questions)</option>"; }).join("");
       usePage(0);
-    } catch (e) { console.error(e); $("own-keyinfo").className = "bad small"; $("own-keyinfo").textContent = "Could not read this file. Check your internet connection, or type the key."; }
+    } catch (e) { console.error(e); $("own-keyinfo").className = "bad small"; $("own-keyinfo").textContent = "Could not read this file. Check your internet connection and try again."; }
   });
   $("own-keypage").addEventListener("change", function () { usePage(+this.value); });
   async function usePage(i) {
-    var p = keyPages[i]; $("own-key").value = p.text + "\n";
+    var p = keyPages[i];
+    // a question whose answer could not be read clearly is left out of the marks
+    $("own-key").value = p.text.split("\n").filter(function (ln) { return ln.indexOf("?") < 0; }).join("\n") + "\n";
     if (p.rows) $("own-n").value = Math.min(100, p.rows);
     await parseKey();
     if (p.unsure.length) {
       $("own-keyinfo").className = "bad small";
-      $("own-keyinfo").textContent = "Check questions " + p.unsure.slice(0, 12).join(", ") + (p.unsure.length > 12 ? "…" : "") + ": they could not be read clearly (shown as ?). Type the right answer in the box.";
+      $("own-keyinfo").textContent = $("own-keyinfo").textContent + " Questions " + p.unsure.slice(0, 12).join(", ") + (p.unsure.length > 12 ? "…" : "") + " could not be read clearly, so they are left out of the marks. A clearer photo may read them.";
     }
   }
 
@@ -140,8 +141,9 @@
   $("own-sheet").addEventListener("change", function () {
     var f = this.files[0], p = $("own-pick"); if (!f) { p.innerHTML = pickHTML; return; }
     E.load().catch(function () {});
-    if (window.OMRPdf.isPdf(f)) { p.innerHTML = '<span class="cam" aria-hidden="true">📄</span>'; p.appendChild(document.createTextNode(f.name)); return; }
-    var img = document.createElement("img"); img.src = URL.createObjectURL(f); img.alt = "Your answer sheet"; p.innerHTML = ""; p.appendChild(img);
+    p.innerHTML = '<span class="cam" aria-hidden="true">✅</span>Uploaded. Calculating your marks…';
+    if (parsed) form.requestSubmit ? form.requestSubmit() : form.dispatchEvent(new Event("submit", { cancelable: true }));
+    else p.innerHTML = '<span class="cam" aria-hidden="true">✅</span>Uploaded. Upload the answer key (step 1), then press Calculate my marks.';
   });
 
   function scheme() {
@@ -157,7 +159,7 @@
       busy(true, E.isLoaded() ? "Working…" : "Getting the calculator ready (first time only)…");
       await E.load();
       await parseKey();
-      if (!parsed) { error($("own-key").value.trim() ? "Fix the answer key first: " + $("own-keyinfo").textContent : "Add the answer key first (step 1)."); return; }
+      if (!parsed) { error($("own-key").value.trim() ? $("own-keyinfo").textContent : "Upload the answer key first (step 1)."); return; }
       if (perQ().bad) { error($("own-summary").textContent); return; }
       var sc = scheme(), keys = JSON.stringify(parsed.keys), name = $("own-name").value.trim(), out;
       if (how === "type") {
@@ -186,13 +188,21 @@
         error(out.scan_error); return;
       }
       out.own_key = true;
+      delete out.annotated_b64;   // the sheet itself is not shown, only the marks
       out.marking_note = $("own-summary").textContent.replace(/^Out of [\d.]+ marks\. /, "Your marking: ");
       window.OMRResult.render(out);
     } catch (e) {
       console.error(e);
       error("Something went wrong. Check your internet connection for the first download, then try again.");
-    } finally { busy(false, "Working…"); }
+    } finally {
+      busy(false, "Working…");
+      var sf = $("own-sheet").files[0];
+      if (sf) { $("own-pick").innerHTML = '<span class="cam" aria-hidden="true">✅</span>'; $("own-pick").appendChild(document.createTextNode("Uploaded: " + sf.name + " (tap to choose another)")); }
+    }
   });
+
+  // "Check another sheet": start again with an empty sheet box (the key and scheme stay)
+  if ($("again")) $("again").addEventListener("click", function () { $("own-sheet").value = ""; $("own-pick").innerHTML = pickHTML; });
 
   // ---------- remember the key and scheme on this device ----------
   var FIELDS = ["own-key", "own-n", "own-correct", "own-wrong", "own-blank", "own-multi", "own-skip", "own-perq"];
