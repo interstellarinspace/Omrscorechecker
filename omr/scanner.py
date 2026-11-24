@@ -89,7 +89,38 @@ def _number_track(s):
         if k == 1:
             pl = 0.7 * pl + 0.3 * g
         idx.append(idx[-1] + k)
-    return np.array(idx), s[:, :2].astype(np.float64)
+    idx = np.array(idx)
+    if len(idx) > 1 and np.max(np.diff(idx)) >= 4:
+        idx, s = _renumber_scan(s, p)
+    return idx, s[:, :2].astype(np.float64)
+
+
+def _renumber_scan(s, p):
+    """Many dashes hidden (e.g. KEA's scans, with text printed over the edges). A scan is flat,
+    so the dashes are evenly spaced: number them from a straight-line fit and drop marks that
+    are not on the spacing (letters of the overprinted text)."""
+    y = s[:, 1].astype(np.float64)
+    small = np.diff(y)
+    small = small[small < 1.5 * p]
+    pitch = float(np.median(small)) if len(small) else p
+    best = None
+    for ref in range(len(y)):                 # try each mark as the reference, keep the best fit
+        idx = np.round((y - y[ref]) / pitch)
+        res = np.abs(y - y[ref] - idx * pitch)
+        inl = res < 0.25 * pitch
+        if best is None or inl.sum() > best[0]:
+            best = (inl.sum(), ref)
+    idx = np.round((y - y[best[1]]) / pitch)
+    for _ in range(3):                        # refine the spacing on the marks that fit
+        inl = np.abs(y - y[best[1]] - idx * pitch) < 0.25 * pitch
+        b, a = np.polyfit(idx[inl], y[inl], 1)
+        pitch = b
+        idx = np.round((y - a) / pitch)
+    inl = np.abs(y - a - idx * pitch) < 0.25 * pitch
+    idx, s = idx[inl], s[inl]
+    keep = np.r_[True, np.diff(idx) > 0]
+    idx, s = idx[keep], s[keep]
+    return (idx - idx[0]).astype(int), s
 
 
 def find_tracks(img):
@@ -224,13 +255,22 @@ def _prepare(image):
     return img
 
 
+def _edge_rows(tu, g):
+    """Circles found in the row just before and just after a grid."""
+    n = 0
+    for du in (-1, g["ny"]):
+        e = dict(g, u0=g["u0"] + du * g["du"], ny=1)
+        n += int(_match(tu, e, 0.25)[2].sum())
+    return n
+
+
 def _locate(img):
     """Find timing tracks, choose the row numbering, and fit every bubble grid."""
     tracks = find_tracks(img)
     (iL, PL), (iR, PR) = tracks
     row_len = float(np.median(PR[:, 0]) - np.median(PL[:, 0]))
     radius = ANSWER_DT * row_len * 0.27
-    circ = _circles(img[:, :, 2], radius)
+    circ = _circles(img.min(axis=2), radius)   # min of colours: works for blue and orange print
     if len(circ) < 100:
         raise ScanError("Could not see the answer bubbles clearly. Retake the photo in better light, in focus.")
     grids0 = _template_grids()
@@ -246,10 +286,14 @@ def _locate(img):
             except cv2.error:
                 continue
             tu = m.to_tu(circ[:, :2])
-            score = sum(_match(tu, grids0[f"answers{k}"], 0.25)[2].sum() for k in range(4))
+            # circles on the grids, minus circles just outside them (a grid one row off still
+            # lands on circles, but then also on the row before or after, where there are none)
+            score = sum(_match(tu, grids0[f"answers{k}"], 0.25)[2].sum() - 2 * _edge_rows(tu, grids0[f"answers{k}"])
+                        for k in range(4))
+            score += sum(_match(tu, grids0[h], 0.25)[2].sum() - 2 * _edge_rows(tu, grids0[h]) for h in ("register", "serial"))
             if best is None or score > best[0]:
                 best = (score, aL, aR, m, tu)
-    if best is None or best[0] < 150:
+    if best is None or best[0] < 120:
         raise ScanError("Could not line up the answer grid. Make sure the whole sheet is in the photo, flat and in focus.")
     score, aL, aR, m, tu = best
     grids = {}

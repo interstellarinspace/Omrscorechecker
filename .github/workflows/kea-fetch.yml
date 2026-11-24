@@ -40,7 +40,7 @@ jobs:
       - name: Fetch, score and publish
         if: steps.check.outputs.run == 'yes'
         env:
-          KEA_DELAY: "20"
+          KEA_DELAY: "10"
           KEA_MAX_MINUTES: "300"
         run: |
           git config user.name "omr-kea-fetch"

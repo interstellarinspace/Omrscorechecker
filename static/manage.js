@@ -261,7 +261,7 @@
   });
   async function prepareKeys() {
     var subject = $("key-subject").value, text = $("key-text").value;
-    if (!text.trim()) throw new Error("Paste the answers first.");
+    if (!text.trim()) throw new Error("No answers to save yet. Choose the key file (PDF, Excel or CSV) above and it will be read into the box, or type the answers.");
     msg("key-msg", OMREngine.isLoaded() ? "Checking…" : "Loading the checker (first time only)…");
     var changes = {};
     if (keyMode() === "table") {
@@ -288,6 +288,7 @@
     catch (e) { msg("key-msg", e.message, "bad"); $("key-preview").innerHTML = ""; }
   });
   $("key-save").addEventListener("click", async function () {
+    if (keyPages.length > 1) { $("kp-save").click(); return; }   // keys read from a multi-subject PDF
     var btn = this; btn.disabled = true;
     try {
       var p = await prepareKeys(), files = {};
@@ -731,7 +732,7 @@
     var box = $("key-pages");
     if (keyPages.length < 2) { box.innerHTML = ""; box.hidden = true; return; }
     box.hidden = false;
-    box.innerHTML = "<h3>This PDF has " + keyPages.length + " answer keys</h3><p class='muted'>Choose the subject for each page (the page heading is shown), then press Save all keys.</p>" +
+    box.innerHTML = "<h3>This PDF has " + keyPages.length + " answer keys</h3><p class='muted'>Choose the subject for each page (the page heading is shown), then press Save all keys (or Save to website below).</p>" +
       keyPages.map(function (k, i) {
         return '<div class="keypage"><div class="keyhead"><img alt="Heading of page ' + k.page + '" src="' + k.img + '"></div>' +
           "<p><b>Page " + k.page + "</b>: " + k.rows + " questions read" + (k.unsure.length ? ", <span class='bad'>check questions " + k.unsure.join(", ") + "</span>" : ", all clear") + "</p>" +
