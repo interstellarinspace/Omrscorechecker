@@ -70,7 +70,19 @@
     <button type="button" data-tab="tab-merit">Merit list</button>
     <button type="button" data-tab="tab-keys">Answer keys</button>
     <button type="button" data-tab="tab-subjects">Exams &amp; subjects</button>
+    <button type="button" data-tab="tab-live">When it went live</button>
   </div>
+
+  <section class="card tab" id="tab-live" hidden>
+    <h2>When each update went live</h2>
+    <p class="muted">Every answer key, result batch, exam change and website change, with the date and time (IST) it went live on the website.</p>
+    <div class="row2"><select id="live-kind">
+      <option value="">Everything</option><option value="key">Answer keys</option><option value="results">Results and sheets</option>
+      <option value="exam">Exams and subjects</option><option value="kea">KEA fetch</option><option value="site">Website changes</option>
+    </select><button class="btn secondary" type="button" id="live-refresh">Refresh</button></div>
+    <p id="live-msg"></p>
+    <div class="scroll"><table id="live-table"></table></div>
+  </section>
 
   <section class="card tab" id="tab-keys" hidden>
     <h2>Answer keys</h2>

@@ -248,6 +248,59 @@
     b.addEventListener("click", function () { openTab(b.dataset.tab); });
   });
 
+  // ---------- when each update went live ----------
+  // The site is rebuilt after every change saved to GitHub. The list shows each change (commit)
+  // with the time the website build that included it finished, in IST. The newest build that is
+  // live is read from the website itself (static/build.json).
+  var liveRows = null;
+  function ist(t) {
+    return t ? new Date(t).toLocaleString("en-IN", { timeZone: "Asia/Kolkata", day: "2-digit", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", hour12: true }) + " IST" : "";
+  }
+  function liveKind(m) {
+    if (/^KEA fetch|^Start a KEA fetch|^Continue the KEA fetch|^Read again the KEA/i.test(m)) return ["kea", "KEA fetch"];
+    if (/answer key|\bkey\b|keys\b/i.test(m)) return ["key", "Answer key"];
+    if (/sheet|result|publish|merit|inbox/i.test(m)) return ["results", "Results and sheets"];
+    if (/exam|subject|paper/i.test(m)) return ["exam", "Exams and subjects"];
+    return ["site", "Website change"];
+  }
+  async function loadLive() {
+    msg("live-msg", "Loading…");
+    var commits = [];
+    for (var pg = 1; pg <= 2; pg++) commits = commits.concat(await gh("/commits?sha=" + encodeURIComponent(S.branch) + "&per_page=100&page=" + pg));
+    var runs = [];
+    try {   // exact times need the token's "Actions: read" permission; without it the save time is shown
+      runs = ((await gh("/actions/workflows/pages.yml/runs?branch=" + encodeURIComponent(S.branch) + "&status=success&per_page=100")).workflow_runs || [])
+        .map(function (r) { return { start: Date.parse(r.run_started_at || r.created_at), end: r.updated_at, sha: r.head_sha }; })
+        .sort(function (a, b) { return a.start - b.start; });
+    } catch (e) { runs = null; }
+    var liveId = "";
+    try { liveId = ((await (await fetch("static/build.json?t=" + Date.now(), { cache: "no-store" })).json()).id || ""); } catch (e) { /* older build */ }
+    var liveIdx = liveId ? commits.findIndex(function (c) { return c.sha.indexOf(liveId) === 0; }) : -1;
+    liveRows = commits.map(function (c, i) {
+      var t = Date.parse(c.commit.committer.date), first = (c.commit.message || "").split("\n")[0], k = liveKind(first), when = "", state;
+      if (runs) { var r = runs.filter(function (x) { return x.start >= t - 5000; })[0]; if (r) when = r.end; }
+      if (liveIdx >= 0 && i < liveIdx) state = "Going live in a minute or two";
+      else if (when) state = ist(when);
+      else state = ist(c.commit.committer.date) + (runs ? "" : " (saved)");
+      return { kind: k[0], label: k[1], what: first, state: state, saved: ist(c.commit.committer.date) };
+    });
+    renderLive();
+    msg("live-msg", runs ? "Times are when the website finished updating with that change." :
+      "Times are when each change was saved; the website shows it about 2 minutes later. (For exact live times, give your GitHub token Actions: Read access.)", "muted");
+  }
+  function renderLive() {
+    if (!liveRows) return;
+    var k = $("live-kind").value, rows = liveRows.filter(function (r) { return !k || r.kind === k; });
+    $("live-table").innerHTML = "<tr><th>Went live</th><th>Type</th><th>What changed</th></tr>" + (rows.length ? rows.map(function (r) {
+      return "<tr><td style=\"white-space:nowrap\">" + esc(r.state) + "</td><td>" + esc(r.label) + "</td><td>" + esc(r.what) + "</td></tr>";
+    }).join("") : "<tr><td colspan=3 class=muted>Nothing of this type in the latest 200 changes.</td></tr>");
+  }
+  $("live-kind").addEventListener("change", renderLive);
+  $("live-refresh").addEventListener("click", function () { loadLive().catch(function (e) { console.error(e); msg("live-msg", e.message, "bad"); }); });
+  document.querySelector('.tabbar button[data-tab="tab-live"]').addEventListener("click", function () {
+    if (!liveRows) loadLive().catch(function (e) { console.error(e); msg("live-msg", e.message, "bad"); });
+  });
+
   // ---------- answer keys ----------
   function keyMode() { return document.querySelector("input[name=key-mode]:checked").value; }
   Array.prototype.forEach.call(document.querySelectorAll("input[name=key-mode]"), function (r) {
