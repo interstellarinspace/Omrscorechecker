@@ -154,6 +154,16 @@ Each marked OMR sheet is stored once in `published/sheets/`, encrypted with its 
   carries on with the new reader. Sheets that still cannot be read wait in admin/review/ for
   "Fix the sheets that need a look".
 
+## Your own answer key (home page)
+
+The home page's **Use my own answer key** (`/#mykey`) lets anyone add an answer key (typed,
+pasted, or read from a photo or PDF of a key table with `omr/keyread.py`; one set or several,
+answers 1-5 or A-E), set the marking scheme (marks per correct answer or total marks, marks for
+wrong / blank / more than one / option 5, different marks for some questions, negatives that
+grow with a question's marks), and then upload a KEA OMR sheet or type the answers.
+`omr/custom.py` parses the key and grades; `static/own-key.js` runs the page. The key and
+scheme are remembered in that browser only.
+
 ## Exams, papers and subjects
 
 `config.json` has an `exams` list (KREIS, KAS, FDA, SDA, Warder) and each subject names its `exam` and `paper`. Every exam has a tab and a page (`/exams/<id>`), and each subject has an answer-key page that shows "Key coming soon" until a key is added. An exam can override `num_questions`, `options`, `set_codes`, `marking` and `not_attempted_option`. Photo checking works for exams with `"omr_layout": "kea_kreis"` (the KEA sheet). Other exams need their sheet layout added from a sample photo; until then their sheets can be added in the admin page's **Add one sheet** tab by typing the answers.

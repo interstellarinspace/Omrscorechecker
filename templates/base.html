@@ -56,6 +56,24 @@
   .tabs .sep { flex:none; width:1px; background:rgba(255,255,255,.35); margin:4px 2px; }
   .badge { display:inline-block; font-size:.78rem; font-weight:700; border-radius:999px; padding:2px 9px; }
   .badge.soon { background:var(--warnbg); color:var(--warn); } .badge.ready { background:var(--okbg); color:var(--ok); }
+  .mode { display:flex; gap:6px; background:#fff; border:1px solid var(--line); border-radius:999px; padding:4px; margin-bottom:12px; }
+  .mode button { flex:1; border:0; background:none; color:var(--accent); font-weight:700; font-size:.95rem; padding:10px 8px; border-radius:999px; cursor:pointer; }
+  .mode button.on { background:var(--grad); color:#fff; }
+  h3.step { display:flex; align-items:center; gap:8px; font-size:1.02rem; margin:22px 0 4px; }
+  h3.step span { display:inline-grid; place-items:center; width:26px; height:26px; border-radius:50%; background:var(--grad); color:#fff; font-size:.85rem; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:0 12px; }
+  .grid2 label { font-size:.9rem; }
+  @media (max-width:420px) { .grid2 { grid-template-columns:1fr; } }
+  input[type=number] { width:100%; padding:12px 14px; font-size:16px; border:1.5px solid var(--line); border-radius:10px; background:#fbfbff; color:var(--ink); }
+  label.check { display:flex; gap:10px; align-items:flex-start; font-weight:500; }
+  label.check input { margin-top:5px; width:18px; height:18px; flex:none; }
+  .presets { display:flex; flex-wrap:wrap; gap:8px; margin:10px 0 4px; }
+  .presets button { border:1.5px solid var(--accent); background:#fff; color:var(--accent); font-weight:600; font-size:.9rem; padding:7px 12px; border-radius:999px; cursor:pointer; }
+  .presets button.on { background:var(--grad); color:#fff; border-color:transparent; }
+  .pick.small { min-height:90px; }
+  .small { font-size:.85rem; }
+  p.ok { color:var(--ok); } p.bad { color:var(--bad); }
+  .busy { text-align:center; color:var(--accent); font-weight:600; margin-top:10px; }
   .exam-chips { display:flex; flex-wrap:wrap; gap:8px; }
   .exam-chips button { border:1.5px solid var(--accent); background:#fff; color:var(--accent); font-weight:700; font-size:.98rem; padding:9px 16px; border-radius:999px; cursor:pointer; }
   .exam-chips button.on { background:var(--grad); color:#fff; border-color:transparent; }

@@ -46,7 +46,7 @@ for s in cfg["subjects"]:
 # Build the scanner bundle first, so pages can link it with a version that changes with the keys
 import hashlib  # noqa: E402
 bundle = {}
-for rel in ["config.json", "omr/__init__.py", "omr/scanner.py", "omr/keys.py", "omr/keyread.py", "omr/names.py", "omr/name_model.txt"] + \
+for rel in ["config.json", "omr/__init__.py", "omr/scanner.py", "omr/keys.py", "omr/keyread.py", "omr/custom.py", "omr/names.py", "omr/name_model.txt"] + \
         [os.path.relpath(p, ROOT) for p in glob.glob(os.path.join(ROOT, "keys", "*", "*.txt"))]:
     with open(os.path.join(ROOT, rel), encoding="utf-8") as f:
         bundle[rel.replace(os.sep, "/")] = f.read()

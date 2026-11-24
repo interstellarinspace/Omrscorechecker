@@ -50,7 +50,7 @@
         ["blank", c.blank, "Blank"], ["multiple", c.multiple, "Multiple"]].map(function (s) {
         return '<div class="s-' + s[0] + '"><b>' + s[1] + "</b>" + s[2] + "</div>";
       }).join("");
-      $("res-marking").textContent = "Marking: +" + fmt(m.correct) + " correct, " + fmt(m.wrong) + " wrong, " + fmt(m.skipped) + " for option " + five +
+      $("res-marking").textContent = r.marking_note ? r.marking_note : "Marking: +" + fmt(m.correct) + " correct, " + fmt(m.wrong) + " wrong, " + fmt(m.skipped) + " for option " + five +
         " (not attempted), " + fmt(m.blank) + " for no bubble shaded, " + fmt(m.multiple) + " for more than one shaded.";
       loadJsPDF().catch(function () {});
     }
@@ -65,14 +65,14 @@
         esc(q.result === "skipped" ? "not attempted" : q.result) + "</td><td>" + fmt(q.marks) + "</td></tr>";
     }).join("");
     note("");
-    show($("scan-form"), false); show($("intro"), false); show($("result"), true); show($("nav-back"), true);
+    show($("forms") || $("scan-form"), false); show($("intro"), false); show($("result"), true); show($("nav-back"), true);
     if (!standalone && !pushed) { history.pushState({ omr: "result" }, ""); pushed = true; }
     window.scrollTo(0, 0);
   }
 
   function showForm() {
     pushed = false;
-    show($("result"), false); show($("scan-form"), true); show($("intro"), true); show($("nav-back"), false); show($("multi"), false);
+    show($("result"), false); show($("forms") || $("scan-form"), true); show($("intro"), true); show($("nav-back"), false); show($("multi"), false);
     if ($("sheet")) $("sheet").value = "";
     if ($("pick")) $("pick").innerHTML = pickHTML;
     window.scrollTo(0, 0);
@@ -164,7 +164,7 @@
     ctx.fillStyle = "#3730a3"; ctx.font = "600 30px system-ui, sans-serif";
     ctx.fillText("Set " + (r.version || "?") + "   ·   Register " + (full ? r.register_number : mask(r.register_number)) + "   ·   Booklet " + (r.booklet_serial || ""), W / 2, 1030);
     ctx.fillStyle = "#5f6787"; ctx.font = "500 26px system-ui, sans-serif";
-    ctx.fillText("Checked on " + today() + " against the KEA provisional answer key", W / 2, 1082);
+    ctx.fillText("Checked on " + today() + " against " + (r.own_key ? "your own answer key" : "the KEA provisional answer key"), W / 2, 1082);
     ctx.fillText("Unofficial estimate. KEA's final key and results are what count.", W / 2, 1122);
     ctx.fillStyle = "#fff"; ctx.font = "700 34px system-ui, sans-serif"; ctx.fillText("Check your score free", W / 2, 1250);
     ctx.font = "500 28px system-ui, sans-serif"; ctx.globalAlpha = 0.95; ctx.fillText((SITE.url || location.origin).replace(/^https?:\/\//, ""), W / 2, 1296); ctx.globalAlpha = 1;
