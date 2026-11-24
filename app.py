@@ -35,6 +35,8 @@ PLAY_URL = os.environ.get("PLAY_STORE_URL", "")
 APPSTORE_URL = os.environ.get("APP_STORE_URL", "")
 # Set by build_site.py: render pages for GitHub Pages, where the scanner runs in the browser.
 STATIC_SITE = os.environ.get("STATIC_SITE") == "1"
+# owner/name of the GitHub repository the admin page saves to (set automatically in GitHub Actions)
+GITHUB_REPO = os.environ.get("GITHUB_REPOSITORY", "")
 
 
 def cfg():
@@ -45,7 +47,7 @@ def cfg():
 def inject():
     base = SITE_URL or request.url_root.rstrip("/")
     return {"cfg": cfg(), "site_url": base, "play_url": PLAY_URL, "appstore_url": APPSTORE_URL,
-            "canonical": base + request.path, "static_site": STATIC_SITE}
+            "canonical": base + request.path, "static_site": STATIC_SITE, "github_repo": GITHUB_REPO}
 
 
 def subject_name(c, sid):
@@ -173,7 +175,7 @@ def answer_key(subject):
 @app.route("/robots.txt")
 def robots():
     base = SITE_URL or request.url_root.rstrip("/")
-    body = f"User-agent: *\nDisallow: /admin\nDisallow: /api/\nAllow: /\n\nSitemap: {base}/sitemap.xml\n"
+    body = f"User-agent: *\nDisallow: /admin\nDisallow: /manage\nDisallow: /api/\nDisallow: /published/\nAllow: /\n\nSitemap: {base}/sitemap.xml\n"
     return app.response_class(body, mimetype="text/plain")
 
 
@@ -181,11 +183,27 @@ def robots():
 def sitemap():
     c = cfg()
     base = SITE_URL or request.url_root.rstrip("/")
-    paths = ["/"] + [f"/kreis-2026/{s['slug']}" for s in c["subjects"]] + ["/privacy"]
+    paths = ["/", "/results"] + [f"/kreis-2026/{s['slug']}" for s in c["subjects"]] + ["/privacy"]
     today = dt.date.today().isoformat()
     urls = "".join(f"<url><loc>{base}{p}</loc><lastmod>{today}</lastmod></url>" for p in paths)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>'
     return app.response_class(xml, mimetype="application/xml")
+
+
+@app.route("/results")
+def results_page():
+    return render_template("results.html", cfg=cfg())
+
+
+@app.route("/published/<path:path>")
+def published_file(path):
+    return send_from_directory(os.path.join(K.ROOT, "published"), path)
+
+
+@app.route("/manage")
+def manage():
+    """Admin page for the GitHub Pages site: keys, subjects, bulk scanning (saves to the GitHub repo)."""
+    return render_template("manage.html", cfg=cfg())
 
 
 @app.route("/app/")

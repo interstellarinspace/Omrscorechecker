@@ -1,1 +1,1 @@
-<script>window.OMR_SITE = {{ {"name": cfg.site_name, "exam": cfg.exam_short, "url": site_url ~ "/", "home": url_for('index')}|tojson }};</script>
+<script>window.OMR_SITE = {{ {"name": cfg.site_name, "exam": cfg.exam_short, "url": site_url ~ "/", "home": url_for('index'), "repo": github_repo}|tojson }};</script>

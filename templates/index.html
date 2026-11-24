@@ -31,7 +31,7 @@
 <div class="hero">
   <h1>{{ cfg.exam_short }} OMR score calculator</h1>
   <p>Photograph your OMR answer sheet and see your marks in seconds, checked against the provisional answer key. KREIS ಕೀ ಉತ್ತರಗಳು 2026.</p>
-  <div class="chips"><span>GK · Kannada · Science</span><span>Sets A1 B1 C1 D1</span><span>Free</span><span>Score card PDF</span></div>
+  <div class="chips"><span>{% for s in cfg.subjects %}{{ s.short or s.name }}{% if not loop.last %} · {% endif %}{% endfor %}</span><span>Sets {{ cfg.set_codes|join(" ") }}</span><span>Free</span><span>Score card PDF</span></div>
 </div>
 </div>
 {% if error %}<div class="err">{{ error }}</div>{% endif %}
@@ -83,6 +83,7 @@
 <script>window.OMR_BUNDLE = "{{ url_for('static', filename='omr-bundle.json') }}";</script>
 <script src="{{ url_for('static', filename='result-view.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
+<script src="{{ url_for('static', filename='omr-engine.js') }}"></script>
 <script src="{{ url_for('static', filename='browser-scan.js') }}"></script>{% endif %}
 <script>
   document.getElementById('sheet').addEventListener('change', function () {

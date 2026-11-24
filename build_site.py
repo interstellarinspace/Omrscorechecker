@@ -34,7 +34,7 @@ def get(path):
     return r.data
 
 
-pages = {"/": "index.html", "/privacy": "privacy.html", "/sitemap.xml": "sitemap.xml", "/robots.txt": "robots.txt"}
+pages = {"/": "index.html", "/results": "results.html", "/manage": "manage.html", "/privacy": "privacy.html", "/sitemap.xml": "sitemap.xml", "/robots.txt": "robots.txt"}
 for s in cfg["subjects"]:
     pages[f"/kreis-2026/{s['slug']}"] = f"kreis-2026/{s['slug']}.html"   # Pages serves /x for x.html
 for path, name in pages.items():
@@ -44,6 +44,9 @@ for path, name in pages.items():
         f.write(get(path))
 
 shutil.copytree(os.path.join(ROOT, "static"), os.path.join(OUT, "static"))
+pub = os.path.join(ROOT, "published")
+if os.path.isdir(pub):
+    shutil.copytree(pub, os.path.join(OUT, "published"))
 # Everything the in-browser scanner needs, in one file
 bundle = {}
 for rel in ["config.json", "omr/__init__.py", "omr/scanner.py", "omr/keys.py"] + \

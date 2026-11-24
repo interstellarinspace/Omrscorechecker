@@ -102,3 +102,14 @@ publishes it on every push to `main` once Settings > Pages > Source is set to
 "GitHub Actions". The site is then at
 `https://<user>.github.io/<repo>/`. Results are not collected centrally on
 this version; use the hosted server (`app.py`) if you need the admin page.
+
+## Admin page on the website (/manage)
+
+The GitHub Pages site has its own admin page at `/manage` (linked as "Admin" in the footer). It saves everything as commits to this repository, and the site republishes itself 1 to 2 minutes later.
+
+- **Connect:** create a fine-grained GitHub token (github.com › Settings › Developer settings › Fine-grained tokens) with access to only this repository and *Contents: Read and write*. Paste it on the admin page. It is kept in the browser only.
+- **Answer keys:** paste a whole table (`Q A1 B1 C1 D1`, rows you leave out keep their saved answer) or one set's key. Saved to `keys/<subject>/<set>.txt`.
+- **Subjects:** add a new paper that uses the same OMR sheet. Saved to `config.json`. It gets its own answer-key page, tab and dropdown entry.
+- **Bulk scan & publish:** pick a subject and select many sheet photos. They are read in the browser (not uploaded). Check or correct the register and booklet numbers, add names if you want, download a CSV, and publish.
+
+Published results live in `published/results/`. Each file is encrypted (AES-GCM) with a key derived (PBKDF2, 150,000 rounds) from the candidate's register number plus booklet number, and its file name comes from the same derivation. There is no list of results. A candidate opens `/results`, types both numbers, and sees their marks, score card PDF and share buttons.

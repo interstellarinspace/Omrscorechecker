@@ -99,12 +99,13 @@
 <body>
 <header class="top">
   <div class="bar">
-    <button type="button" class="back" id="nav-back" aria-label="Go back"{% if request.endpoint == 'index' and not r %} hidden{% endif %}>
+    <button type="button" class="back" id="nav-back" aria-label="Go back"{% if request.endpoint in ('index', 'results_page') and not r %} hidden{% endif %}>
       <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.4 5.4 14 4l-8 8 8 8 1.4-1.4L8.8 12z"/></svg>Back</button>
     <a class="brand" href="{{ url_for('index') }}"><img src="{{ url_for('static', filename='icon-192.png') }}" alt="">OMR Score Check</a>
   </div>
   <nav class="tabs">
     <a href="{{ url_for('index') }}"{% if request.endpoint == 'index' %} class="on"{% endif %}>Check score</a>
+    <a href="{{ url_for('results_page') }}"{% if request.endpoint == 'results_page' %} class="on"{% endif %}>Results</a>
     {% for s in cfg.subjects %}<a href="{{ url_for('answer_key', subject=s.slug) }}"{% if subj is defined and subj.id == s.id %} class="on"{% endif %}>{{ s.short or s.name }} key</a>{% endfor %}
   </nav>
 </header>
@@ -114,7 +115,8 @@
   Answer keys are the provisional keys published by KEA; the final keys and results announced by KEA are what count.</p>
   <p><a href="{{ url_for('index') }}">Check your score</a> ·
   {% for s in cfg.subjects %}<a href="{{ url_for('answer_key', subject=s.slug) }}">{{ s.name }} answer key</a> · {% endfor %}
-  <a href="{{ url_for('privacy') }}">Privacy</a></p>
+  <a href="{{ url_for('results_page') }}">Results by register number</a> ·
+  <a href="{{ url_for('privacy') }}">Privacy</a> · <a href="{{ url_for('manage') }}" rel="nofollow">Admin</a></p>
 </footer>
 <script>
   // Back: inside the score checker it returns from the result to the form; elsewhere it goes
