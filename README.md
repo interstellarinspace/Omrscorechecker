@@ -119,3 +119,9 @@ Tabs:
 Published results live in `published/results/`, one file per candidate holding all their published papers. Each file is encrypted with a key derived (PBKDF2, 150,000 rounds) from the lookup numbers, and its file name comes from the same derivation, so there is no public list. `results_lookup` in `config.json` sets the lookup numbers: `"register"` (register number only, the current setting) or `"register_booklet"` (register number plus booklet number, harder for others to guess). Changing it needs the results to be published again.
 
 Each marked OMR sheet is stored once in `published/sheets/`, encrypted with its own random key. That key is inside the candidate's result file and the admin's encrypted list, so the candidate (from the Results page, "View my OMR sheet") and the admin (Search by register no.) can both open it.
+
+## Exams, papers and subjects
+
+`config.json` has an `exams` list (KREIS, KAS, FDA, SDA, Warder) and each subject names its `exam` and `paper`. Every exam has a tab and a page (`/exams/<id>`), and each subject has an answer-key page that shows "Key coming soon" until a key is added. An exam can override `num_questions`, `options`, `set_codes`, `marking` and `not_attempted_option`. Photo checking works for exams with `"omr_layout": "kea_kreis"` (the KEA sheet). Other exams need their sheet layout added from a sample photo; until then their sheets can be added in the admin page's **Add one sheet** tab by typing the answers.
+
+Admin tabs: **Bulk OMR upload** (many photos at once, for exams whose sheet the site can read), **Add one sheet** (any exam and subject: type the answers or read them from a photo, optional photo attached), **Search by register no.**, **Answer keys**, **Exams & subjects** (add exams and subjects; remove a subject that has no key yet).

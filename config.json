@@ -1,5 +1,6 @@
 {
   "exam_title": "KREIS Teachers Recruitment Exam, 22.11.2026",
+  "site_name": "OMR Score Check",
   "num_questions": 100,
   "options": [
     "1",
@@ -15,27 +16,6 @@
     "C1",
     "D1"
   ],
-  "subjects": [
-    {
-      "id": "general_knowledge",
-      "name": "Paper I: General Knowledge",
-      "short": "GK",
-      "slug": "general-knowledge-answer-key"
-    },
-    {
-      "id": "kannada",
-      "name": "Paper II: Kannada",
-      "short": "Kannada",
-      "slug": "kannada-answer-key"
-    },
-    {
-      "id": "science",
-      "name": "Paper II: Science",
-      "short": "Science",
-      "slug": "science-answer-key"
-    }
-  ],
-  "marking_note": "1 for correct; 0 for option 5; 0.25 deducted for wrong, no bubble, or more than one bubble",
   "marking": {
     "correct": 1,
     "wrong": -0.25,
@@ -43,8 +23,179 @@
     "blank": -0.25,
     "multiple": -0.25
   },
+  "marking_note": "1 for correct; 0 for option 5; 0.25 deducted for wrong, no bubble, or more than one bubble",
+  "results_lookup": "register",
   "exam_short": "KREIS 2026",
   "exam_full": "KREIS Teachers Recruitment Exam (Karnataka Residential Educational Institutions Society), held 22 November 2026",
-  "site_name": "OMR Score Check",
-  "results_lookup": "register"
+  "exams": [
+    {
+      "id": "kreis",
+      "name": "KREIS",
+      "short": "KREIS 2026",
+      "full": "KREIS Teachers Recruitment Exam (Karnataka Residential Educational Institutions Society), held 22 November 2026",
+      "slug": "kreis-2026",
+      "omr_layout": "kea_kreis",
+      "key_note": "Provisional keys published by KEA on 22.11.2026."
+    },
+    {
+      "id": "kas",
+      "name": "KAS",
+      "short": "KAS",
+      "full": "KAS (Karnataka Administrative Service) Preliminary Exam",
+      "slug": "kas",
+      "omr_layout": ""
+    },
+    {
+      "id": "fda",
+      "name": "FDA",
+      "short": "FDA",
+      "full": "FDA (First Division Assistant) Recruitment Exam",
+      "slug": "fda",
+      "omr_layout": ""
+    },
+    {
+      "id": "sda",
+      "name": "SDA",
+      "short": "SDA",
+      "full": "SDA (Second Division Assistant) Recruitment Exam",
+      "slug": "sda",
+      "omr_layout": ""
+    },
+    {
+      "id": "warder",
+      "name": "Warder",
+      "short": "Warder",
+      "full": "Jail Warder Recruitment Exam",
+      "slug": "warder",
+      "omr_layout": ""
+    }
+  ],
+  "subjects": [
+    {
+      "id": "general_knowledge",
+      "exam": "kreis",
+      "paper": "Paper I",
+      "subject": "General Knowledge",
+      "name": "Paper I: General Knowledge",
+      "short": "GK",
+      "slug": "general-knowledge-answer-key"
+    },
+    {
+      "id": "science",
+      "exam": "kreis",
+      "paper": "Paper II",
+      "subject": "Science",
+      "name": "Paper II: Science",
+      "short": "Science",
+      "slug": "science-answer-key"
+    },
+    {
+      "id": "computer",
+      "exam": "kreis",
+      "paper": "Paper II",
+      "subject": "Computer Science",
+      "name": "Paper II: Computer Science",
+      "short": "Computer",
+      "slug": "computer-science-answer-key"
+    },
+    {
+      "id": "mathematics",
+      "exam": "kreis",
+      "paper": "Paper II",
+      "subject": "Mathematics",
+      "name": "Paper II: Mathematics",
+      "short": "Maths",
+      "slug": "mathematics-answer-key"
+    },
+    {
+      "id": "kannada",
+      "exam": "kreis",
+      "paper": "Paper II",
+      "subject": "Kannada",
+      "name": "Paper II: Kannada",
+      "short": "Kannada",
+      "slug": "kannada-answer-key"
+    },
+    {
+      "id": "english",
+      "exam": "kreis",
+      "paper": "Paper II",
+      "subject": "English",
+      "name": "Paper II: English",
+      "short": "English",
+      "slug": "english-answer-key"
+    },
+    {
+      "id": "urdu",
+      "exam": "kreis",
+      "paper": "Paper II",
+      "subject": "Urdu",
+      "name": "Paper II: Urdu",
+      "short": "Urdu",
+      "slug": "urdu-answer-key"
+    },
+    {
+      "id": "kas_p1",
+      "exam": "kas",
+      "paper": "Paper I",
+      "subject": "General Studies",
+      "name": "Paper I: General Studies",
+      "short": "General Studies",
+      "slug": "paper-1-general-studies-answer-key"
+    },
+    {
+      "id": "kas_p2",
+      "exam": "kas",
+      "paper": "Paper II",
+      "subject": "General Studies",
+      "name": "Paper II: General Studies",
+      "short": "General Studies",
+      "slug": "paper-2-general-studies-answer-key"
+    },
+    {
+      "id": "fda_p1",
+      "exam": "fda",
+      "paper": "Paper I",
+      "subject": "General Knowledge",
+      "name": "Paper I: General Knowledge",
+      "short": "General Knowledge",
+      "slug": "paper-1-general-knowledge-answer-key"
+    },
+    {
+      "id": "fda_p2",
+      "exam": "fda",
+      "paper": "Paper II",
+      "subject": "General Kannada & English",
+      "name": "Paper II: General Kannada & English",
+      "short": "Kannada & English",
+      "slug": "paper-2-kannada-english-answer-key"
+    },
+    {
+      "id": "sda_p1",
+      "exam": "sda",
+      "paper": "Paper I",
+      "subject": "General Knowledge",
+      "name": "Paper I: General Knowledge",
+      "short": "General Knowledge",
+      "slug": "paper-1-general-knowledge-answer-key"
+    },
+    {
+      "id": "sda_p2",
+      "exam": "sda",
+      "paper": "Paper II",
+      "subject": "General Kannada & English",
+      "name": "Paper II: General Kannada & English",
+      "short": "Kannada & English",
+      "slug": "paper-2-kannada-english-answer-key"
+    },
+    {
+      "id": "warder_p1",
+      "exam": "warder",
+      "paper": "Paper I",
+      "subject": "General Knowledge",
+      "name": "Paper I: General Knowledge",
+      "short": "General Knowledge",
+      "slug": "general-knowledge-answer-key"
+    }
+  ]
 }

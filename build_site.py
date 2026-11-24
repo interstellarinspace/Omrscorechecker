@@ -37,8 +37,12 @@ def get(path):
 pages = {"/": "index.html", "/results": "results.html", "/privacy": "privacy.html", "/sitemap.xml": "sitemap.xml", "/robots.txt": "robots.txt"}
 if A.ADMIN_PAGE:   # unlinked admin page
     pages["/" + A.ADMIN_PAGE] = A.ADMIN_PAGE + ".html"
+slugs = {e["id"]: e["slug"] for e in cfg.get("exams", [])}
+for e in cfg.get("exams", []):
+    pages[f"/exams/{e['id']}"] = f"exams/{e['id']}.html"
 for s in cfg["subjects"]:
-    pages[f"/kreis-2026/{s['slug']}"] = f"kreis-2026/{s['slug']}.html"   # Pages serves /x for x.html
+    ex = slugs.get(s.get("exam"), "kreis-2026")
+    pages[f"/{ex}/{s['slug']}"] = f"{ex}/{s['slug']}.html"   # Pages serves /x for x.html
 for path, name in pages.items():
     dest = os.path.join(OUT, name)
     os.makedirs(os.path.dirname(dest), exist_ok=True)

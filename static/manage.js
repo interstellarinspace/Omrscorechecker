@@ -122,25 +122,59 @@
     var k = {}; text.split(/\n/).forEach(function (ln) { var m = ln.trim().match(/^(\d+)\s+(\S+)$/); if (m) k[m[1]] = m[2]; }); return k;
   }
 
-  function renderAll() {
-    var c = S.cfg;
-    ["key-subject", "bulk-subject"].forEach(function (id) {
-      var sel = $(id), v = sel.value;
-      sel.innerHTML = c.subjects.map(function (s) { return '<option value="' + esc(s.id) + '">' + esc(s.name) + "</option>"; }).join("");
-      if (v && c.subjects.some(function (s) { return s.id === v; })) sel.value = v;
-    });
-    $("key-set").innerHTML = c.set_codes.map(function (s) { return "<option>" + esc(s) + "</option>"; }).join("");
-    $("keys-status").innerHTML = "<tr><th>Subject</th>" + c.set_codes.map(function (s) { return "<th>" + esc(s) + "</th>"; }).join("") + "</tr>" +
-      c.subjects.map(function (s) {
-        return "<tr><td style='text-align:left'>" + esc(s.short || s.name) + "</td>" + c.set_codes.map(function (code) {
-          var n = Object.keys((S.keys[s.id] || {})[code] || {}).length;
-          return '<td class="' + (n >= c.num_questions ? "ok" : n ? "warn" : "bad") + '">' + (n || "–") + "</td>";
-        }).join("") + "</tr>";
-      }).join("");
-    $("subj-table").innerHTML = "<tr><th>Name</th><th>Short</th><th>Answer-key page</th></tr>" + c.subjects.map(function (s) {
-      return "<tr><td>" + esc(s.name) + "</td><td>" + esc(s.short || "") + "</td><td class='muted'>" + esc(s.slug) + "</td></tr>";
+  var SETTINGS = ["num_questions", "options", "not_attempted_option", "set_codes", "marking"];
+  function examOf(sid) {
+    var s = S.cfg.subjects.filter(function (x) { return x.id === sid; })[0] || {};
+    return (S.cfg.exams || []).filter(function (e) { return e.id === s.exam; })[0] || (S.cfg.exams || [])[0] || {};
+  }
+  function sc(sid) { var e = examOf(sid), o = {}; SETTINGS.forEach(function (k) { o[k] = k in e ? e[k] : S.cfg[k]; }); return o; }
+  function subjectOptions(filter) {
+    return (S.cfg.exams || []).map(function (e) {
+      var subs = S.cfg.subjects.filter(function (s) { return s.exam === e.id && (!filter || filter(e, s)); });
+      return subs.length ? '<optgroup label="' + esc(e.short || e.name) + '">' + subs.map(function (s) {
+        return '<option value="' + esc(s.id) + '">' + esc(e.name + " · " + s.name) + "</option>"; }).join("") + "</optgroup>" : "";
     }).join("");
   }
+  function keyCount(sid) {
+    var codes = sc(sid).set_codes; return codes.map(function (code) { return Object.keys((S.keys[sid] || {})[code] || {}).length; });
+  }
+  function renderAll() {
+    var c = S.cfg;
+    [["key-subject", null], ["one-subject", null], ["bulk-subject", function (e) { return e.omr_layout === "kea_kreis"; }]].forEach(function (x) {
+      var sel = $(x[0]), v = sel.value;
+      sel.innerHTML = subjectOptions(x[1]);
+      if (v && sel.querySelector('option[value="' + v + '"]')) sel.value = v;
+    });
+    renderKeySets(); renderOne();
+    $("keys-status").innerHTML = (c.exams || []).map(function (e) {
+      var subs = c.subjects.filter(function (s) { return s.exam === e.id; }); if (!subs.length) return "";
+      var codes = sc(subs[0].id).set_codes, n = sc(subs[0].id).num_questions;
+      return "<tr><th style='text-align:left'>" + esc(e.short || e.name) + "</th>" + codes.map(function (s) { return "<th>" + esc(s) + "</th>"; }).join("") + "</tr>" +
+        subs.map(function (s) {
+          return "<tr><td style='text-align:left'>" + esc(s.name) + "</td>" + keyCount(s.id).map(function (k) {
+            return '<td class="' + (k >= n ? "ok" : k ? "warn" : "bad") + '">' + (k || "–") + "</td>"; }).join("") + "</tr>";
+        }).join("");
+    }).join("");
+    $("new-exam").innerHTML = (c.exams || []).map(function (e) { return '<option value="' + esc(e.id) + '">' + esc(e.short || e.name) + "</option>"; }).join("");
+    $("subj-list").innerHTML = (c.exams || []).map(function (e) {
+      var subs = c.subjects.filter(function (s) { return s.exam === e.id; });
+      return '<div class="exam-block"><h3>' + esc(e.name) + ' <span class="muted" style="font-weight:500">' + esc(e.full || "") + "</span></h3>" +
+        '<p class="muted" style="margin:0 0 6px">' + (e.omr_layout === "kea_kreis" ? "OMR photo checking: on" : "OMR photo checking: coming soon (needs a sample sheet)") + "</p>" +
+        (subs.map(function (s) {
+          var has = keyCount(s.id).some(function (k) { return k > 0; });
+          return '<div class="subj-line"><span>' + esc(s.name) + " " + (has ? '<span class="badge ready">key added</span>' : '<span class="badge soon">no key yet</span>') + "</span>" +
+            (has ? "" : '<button type="button" class="linkbtn" data-remove="' + esc(s.id) + '">Remove</button>') + "</div>";
+        }).join("") || '<p class="muted">No subjects yet.</p>') + "</div>";
+    }).join("");
+  }
+  function renderKeySets() {
+    var sid = $("key-subject").value; if (!sid) return;
+    var codes = sc(sid).set_codes, v = $("key-set").value;
+    $("key-set").innerHTML = codes.map(function (s) { return "<option>" + esc(s) + "</option>"; }).join("");
+    if (codes.indexOf(v) >= 0) $("key-set").value = v;
+    if (keyMode() === "table") $("key-help").textContent = "One row per question: question number, then the answer for each set (" + codes.join(" ") + "), as in the published key PDF. Rows you leave out keep their saved answer. Use 23 when two options are accepted and X for a dropped question.";
+  }
+  $("key-subject").addEventListener("change", renderKeySets);
 
   // ---------- tabs ----------
   Array.prototype.forEach.call(document.querySelectorAll(".tabbar button"), function (b) {
@@ -157,7 +191,8 @@
       $("key-set-wrap").hidden = keyMode() !== "one";
       $("key-help").textContent = keyMode() === "one"
         ? "The answers for one set: either one digit per question in order (3342212…), or one numbered answer per line (1 3, 2 4, …). Saving replaces this set's whole key. Use 23 when two options are accepted and X for a dropped question."
-        : "One row per question: question number, then the answer for each set (" + S.cfg.set_codes.join(" ") + "), as in the published key PDF. Rows you leave out keep their saved answer. Use 23 when two options are accepted and X for a dropped question.";
+        : "";
+      if (keyMode() === "table") renderKeySets();
     });
   });
   async function prepareKeys() {
@@ -166,14 +201,14 @@
     msg("key-msg", OMREngine.isLoaded() ? "Checking…" : "Loading the checker (first time only)…");
     var changes = {};
     if (keyMode() === "table") {
-      var t = await OMREngine.call("omr_parse_table", text);
+      var t = await OMREngine.call("omr_parse_table", text, subject);
       if (t.error) throw new Error(t.error);
       Object.keys(t.keys).forEach(function (set) {
         if (!Object.keys(t.keys[set]).length) return;
         changes[set] = Object.assign({}, (S.keys[subject] || {})[set] || {}, t.keys[set]);
       });
     } else {
-      var k = await OMREngine.call("omr_parse_key", text);
+      var k = await OMREngine.call("omr_parse_key", text, subject);
       if (k.error) throw new Error(k.error);
       if (!Object.keys(k.key).length) throw new Error("No answers found.");
       changes[$("key-set").value] = k.key;
@@ -181,7 +216,7 @@
     return { subject: subject, changes: changes };
   }
   function describe(p) {
-    var n = S.cfg.num_questions;
+    var n = sc(p.subject).num_questions;
     return Object.keys(p.changes).map(function (set) { var c = Object.keys(p.changes[set]).length; return set + ": " + c + " of " + n + " answers"; }).join(" · ");
   }
   $("key-check").addEventListener("click", async function () {
@@ -206,24 +241,64 @@
     finally { btn.disabled = false; }
   });
 
-  // ---------- subjects ----------
+  // ---------- exams and subjects ----------
+  function slugify(t) { return t.toLowerCase().replace(/&/g, " ").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""); }
+  async function saveConfig(change, message, msgId) {
+    var latest = JSON.parse(await readFile("config.json"));   // re-read so nothing else in config is lost
+    var result = change(latest);
+    var text = JSON.stringify(latest, null, 2) + "\n";
+    await commit({ "config.json": text }, message);
+    S.cfg = latest; await OMREngine.setFiles({ "config.json": text }); renderAll();
+    return result;
+  }
   $("subj-add").addEventListener("click", async function () {
-    var name = $("new-name").value.trim(), short = $("new-short").value.trim() || name;
-    if (name.length < 3) { msg("subj-msg", "Enter the subject's full name.", "bad"); return; }
-    var id = short.toLowerCase().replace(/[^a-z0-9]+/g, "_").replace(/^_|_$/g, "").slice(0, 30) || "subject";
-    var base = id, i = 2;
-    while (S.cfg.subjects.some(function (s) { return s.id === id; })) id = base + "_" + i++;
-    if (S.cfg.subjects.some(function (s) { return s.name.toLowerCase() === name.toLowerCase(); })) { msg("subj-msg", "There is already a subject with that name.", "bad"); return; }
+    var exam = $("new-exam").value, paper = $("new-paper").value.trim(), subject = $("new-subject").value.trim();
+    var short = $("new-short").value.trim() || subject;
+    if (!paper) { msg("subj-msg", "Enter the paper, for example Paper II.", "bad"); return; }
+    if (subject.length < 2) { msg("subj-msg", "Enter the subject name.", "bad"); return; }
+    var name = paper + ": " + subject;
+    if (S.cfg.subjects.some(function (s) { return s.exam === exam && s.name.toLowerCase() === name.toLowerCase(); })) { msg("subj-msg", "This exam already has " + name + ".", "bad"); return; }
     var btn = this; btn.disabled = true; msg("subj-msg", "Saving…");
     try {
-      var latest = JSON.parse(await readFile("config.json"));   // re-read so nothing else in config is lost
-      latest.subjects.push({ id: id, name: name, short: short, slug: id.replace(/_/g, "-") + "-answer-key" });
-      var text = JSON.stringify(latest, null, 2) + "\n";
-      await commit({ "config.json": text }, "Add subject: " + name);
-      S.cfg = latest; await OMREngine.setFiles({ "config.json": text }); renderAll();
-      $("new-name").value = ""; $("new-short").value = "";
-      msg("subj-msg", "Added " + name + ". Now add its answer keys in the Answer keys tab. It appears on the website in about 1 to 2 minutes.", "ok");
+      await saveConfig(function (c) {
+        var base = (exam === "kreis" ? "" : exam + "_") + slugify(paper === "Paper I" || paper === "Paper II" ? (exam === "kreis" ? subject : paper + " " + subject) : paper + " " + subject).replace(/-/g, "_").slice(0, 40);
+        var id = base || "subject", i = 2; while (c.subjects.some(function (s) { return s.id === id; })) id = base + "_" + i++;
+        var slug = slugify((exam === "kreis" ? "" : paper + " ") + subject) + "-answer-key", j = 2, sl = slug;
+        while (c.subjects.some(function (s) { return s.exam === exam && s.slug === sl; })) sl = slug.replace(/-answer-key$/, "-" + j++ + "-answer-key");
+        c.subjects.push({ id: id, exam: exam, paper: paper, subject: subject, name: name, short: short, slug: sl });
+      }, "Add subject: " + exam.toUpperCase() + " " + name);
+      $("new-subject").value = ""; $("new-short").value = "";
+      msg("subj-msg", "Added " + name + ". Add its answer key in the Answer keys tab. It shows on the website in about 1 to 2 minutes.", "ok");
     } catch (e) { console.error(e); msg("subj-msg", e.message, "bad"); }
+    finally { btn.disabled = false; }
+  });
+  $("subj-list").addEventListener("click", async function (ev) {
+    var b = ev.target.closest("button[data-remove]"); if (!b) return;
+    var sid = b.dataset.remove, s = S.cfg.subjects.filter(function (x) { return x.id === sid; })[0];
+    if (!s || !window.confirm("Remove " + s.name + "? It has no answer key yet.")) return;
+    b.disabled = true;
+    try {
+      await saveConfig(function (c) { c.subjects = c.subjects.filter(function (x) { return x.id !== sid; }); }, "Remove subject: " + s.name);
+      msg("subj-msg", "Removed " + s.name + ".", "ok");
+    } catch (e) { console.error(e); msg("subj-msg", e.message, "bad"); b.disabled = false; }
+  });
+  $("exam-add").addEventListener("click", async function () {
+    var name = $("exam-name").value.trim(), short = $("exam-short").value.trim() || name, full = $("exam-full").value.trim() || short;
+    if (name.length < 2) { msg("exam-msg", "Enter the exam's tab name.", "bad"); return; }
+    if ((S.cfg.exams || []).some(function (e) { return e.name.toLowerCase() === name.toLowerCase(); })) { msg("exam-msg", "There is already an exam called " + name + ".", "bad"); return; }
+    var btn = this; btn.disabled = true; msg("exam-msg", "Saving…");
+    try {
+      await saveConfig(function (c) {
+        c.exams = c.exams || [];
+        var id = slugify(name).replace(/-/g, "_") || "exam", base = id, i = 2;
+        while (c.exams.some(function (e) { return e.id === id; })) id = base + "_" + i++;
+        var slug = slugify(short) || id, reserved = ["exams", "results", "published", "static", "app", "api", "admin", "privacy"];
+        while (reserved.indexOf(slug) >= 0 || c.exams.some(function (e) { return e.slug === slug; })) slug += "-exam";
+        c.exams.push({ id: id, name: name, short: short, full: full, slug: slug, omr_layout: $("exam-same-sheet").checked ? "kea_kreis" : "" });
+      }, "Add exam: " + name);
+      $("exam-name").value = ""; $("exam-short").value = ""; $("exam-full").value = ""; $("exam-same-sheet").checked = false;
+      msg("exam-msg", "Added " + name + ". Now add its papers and subjects above.", "ok");
+    } catch (e) { console.error(e); msg("exam-msg", e.message, "bad"); }
     finally { btn.disabled = false; }
   });
 
@@ -241,10 +316,11 @@
   }
   function renderBulk() {
     var seen = {};
-    bulk.forEach(function (r) { var k = OMRCrypto.digits(r.register_number) + ":" + OMRCrypto.digits(r.booklet_serial); r.dup = !!seen[k]; seen[k] = 1; });
+    var byReg = (S.cfg.results_lookup || "register_booklet") === "register";
+    bulk.forEach(function (r) { var k = OMRCrypto.digits(r.register_number) + ":" + (byReg ? r.subject : OMRCrypto.digits(r.booklet_serial)); r.dup = !!seen[k]; seen[k] = 1; });
     $("bulk-table").innerHTML = "<tr><th>#</th><th>Photo</th><th>Register no.</th><th>Booklet no.</th><th>Name</th><th>Set</th><th>Score</th><th>Status</th></tr>" +
       bulk.map(function (r, i) {
-        var st = r.dup ? ["warn", "Same numbers as an earlier sheet"] : rowStatus(r);
+        var st = r.dup ? ["warn", "Same register number as an earlier sheet"] : rowStatus(r);
         return "<tr><td>" + (i + 1) + "</td><td>" + esc(r.file) + "</td>" +
           '<td><input data-i="' + i + '" data-f="register_number" inputmode="numeric" value="' + esc(r.register_number || "") + '"></td>' +
           '<td><input data-i="' + i + '" data-f="booklet_serial" inputmode="numeric" value="' + esc(r.booklet_serial || "") + '"></td>' +
@@ -298,11 +374,8 @@
     a.href = URL.createObjectURL(new Blob(["﻿" + lines.join("\n")], { type: "text/csv" }));
     a.download = "omr-results-" + $("bulk-subject").value + ".csv"; document.body.appendChild(a); a.click(); a.remove();
   });
-  $("bulk-publish").addEventListener("click", async function () {
-    var rows = bulk.filter(function (r) { return !r.dup && rowStatus(r)[0] === "ok"; });
-    if (!rows.length) return;
-    var btn = this; btn.disabled = true;
-    try {
+  // Publish graded sheets: each candidate's encrypted result file, each marked sheet image, and the admin list.
+  async function publishRows(rows, msgId) {
       await loadTree(); await loadIndex();   // start from the latest saved list
       var byRegister = (S.cfg.results_lookup || "register_booklet") === "register";
       var files = {}, lists = {}, when = new Date().toISOString().slice(0, 10), done = 0;
@@ -325,34 +398,118 @@
           sheet = "published/sheets/" + Array.prototype.map.call(crypto.getRandomValues(new Uint8Array(12)), function (x) { return ("0" + x.toString(16)).slice(-2); }).join("") + ".bin";
           files[sheet] = await putBlob(await OMRCrypto.sealBytes(k.key, r.image));
         }
-        var pub = { subject: r.subject, subject_name: r.subject_name, name: r.name || "", version: r.version, register_number: r.register_number,
+        var pub = { subject: r.subject, subject_name: r.subject_name, exam: r.exam, exam_short: r.exam_short, name: r.name || "", version: r.version, register_number: r.register_number,
           booklet_serial: r.booklet_serial, register_complete: true, grading: g, error: null, marking: r.marking, five: r.five, published: when,
           sheet: sheet, sheet_key: sk };
         var L = await listFor(r);
-        L.results = L.results.filter(function (e) { return !(e.subject === r.subject && e.booklet_serial === r.booklet_serial); });
+        L.results = L.results.filter(function (e) { return !(e.subject === r.subject && (byRegister || e.booklet_serial === r.booklet_serial)); });
         L.results.push(pub);
         // replace an older entry for the same sheet (same register, booklet and subject)
         S.index = S.index.filter(function (e) {
-          var same = e.reg === r.register_number && e.booklet === r.booklet_serial && e.subject === r.subject;
+          var same = e.reg === r.register_number && e.subject === r.subject && (byRegister || e.booklet === r.booklet_serial);
           if (same && e.sheet && e.sheet !== sheet && S.tree[e.sheet]) files[e.sheet] = null;
           return !same;
         });
-        S.index.push({ reg: r.register_number, booklet: r.booklet_serial, name: r.name || "", subject: r.subject, subject_name: r.subject_name,
+        S.index.push({ reg: r.register_number, booklet: r.booklet_serial, name: r.name || "", subject: r.subject, subject_name: r.subject_name, exam_short: r.exam_short,
           set: r.version, score: g.score, max: g.max_score, counts: g.counts, photo: r.file, sheet: sheet, sheet_key: sk, published: when });
-        done++; msg("bulk-msg", "Saving sheet " + done + " of " + rows.length + "…");
+        done++; msg(msgId, "Saving sheet " + done + " of " + rows.length + "…");
       }
       for (var i = 0; i < rows.length; i++) await one(rows[i]);   // in order, so papers of one candidate merge correctly
       for (var id in lists) {
         var L = lists[id], first = L.results[0];
         files[L.path] = (await OMRCrypto.seal({ v: 2, results: L.results }, first.register_number, byRegister ? "" : first.booklet_serial)).body;
       }
-      msg("bulk-msg", "Saving the results list…");
+      msg(msgId, "Saving the results list…");
       files[INDEX] = await putBlob(await OMRCrypto.sealBytes(S.vault, new TextEncoder().encode(JSON.stringify(S.index))));
       await commit(files, "Publish " + rows.length + " result" + (rows.length > 1 ? "s" : "") + ": " + rows[0].subject_name);
       await loadTree();
       showSearch("");
-      msg("bulk-msg", "Published " + rows.length + " result" + (rows.length > 1 ? "s" : "") + " with their OMR sheets. Candidates can look them up on the Results page in about 1 to 2 minutes. You can find them now under Search by register no.", "ok");
+  }
+  $("bulk-publish").addEventListener("click", async function () {
+    var rows = bulk.filter(function (r) { return !r.dup && rowStatus(r)[0] === "ok"; });
+    if (!rows.length) return;
+    var btn = this; btn.disabled = true;
+    try {
+      await publishRows(rows, "bulk-msg");
+      msg("bulk-msg", "Published " + rows.length + " result" + (rows.length > 1 ? "s" : "") + " with their OMR sheets. Candidates can look them up on the Search by Register No. & Exam page in about 1 to 2 minutes. You can find them now under Search by register no.", "ok");
     } catch (e) { console.error(e); msg("bulk-msg", e.message, "bad"); }
+    finally { btn.disabled = false; }
+  });
+
+  // ---------- add one sheet ----------
+  var one = { image: null, photo: "", annotated: false };
+  function renderOne() {
+    var sid = $("one-subject").value; if (!sid) return;
+    var codes = sc(sid).set_codes, v = $("one-set").value;
+    $("one-set").innerHTML = codes.map(function (s) { return "<option>" + esc(s) + "</option>"; }).join("");
+    if (codes.indexOf(v) >= 0) $("one-set").value = v;
+    $("one-read").hidden = !(one.image && !one.annotated && examOf(sid).omr_layout === "kea_kreis");
+  }
+  $("one-subject").addEventListener("change", renderOne);
+  function compress(file) {
+    return new Promise(function (ok, fail) {
+      var img = new Image(); img.onerror = fail;
+      img.onload = function () {
+        var sc2 = Math.min(1, 1600 / Math.max(img.naturalWidth, img.naturalHeight)), cv = document.createElement("canvas");
+        cv.width = Math.round(img.naturalWidth * sc2); cv.height = Math.round(img.naturalHeight * sc2);
+        cv.getContext("2d").drawImage(img, 0, 0, cv.width, cv.height);
+        cv.toBlob(function (b) { b.arrayBuffer().then(function (a) { ok(new Uint8Array(a)); }); }, "image/jpeg", 0.75);
+      };
+      img.src = URL.createObjectURL(file);
+    });
+  }
+  $("one-photo").addEventListener("change", async function () {
+    var f = this.files[0]; one.raw = f || null; one.photo = f ? f.name : ""; one.annotated = false; one.image = null;
+    if (f) {
+      try { one.image = await compress(f); } catch (e) { msg("one-msg", "This photo could not be opened.", "bad"); }
+      $("one-pick").innerHTML = '<img alt="Sheet photo" src="' + URL.createObjectURL(f) + '">';
+    } else $("one-pick").innerHTML = '<span class="cam" aria-hidden="true">📷</span>Choose a photo of the sheet';
+    renderOne();
+  });
+  $("one-read").addEventListener("click", async function () {
+    var btn = this, sid = $("one-subject").value; btn.disabled = true;
+    msg("one-msg", OMREngine.isLoaded() ? "Reading the sheet…" : "Loading the scanner (first time only)…");
+    try {
+      var r = await OMREngine.call("omr_run", new Uint8Array(await one.raw.arrayBuffer()), sid, "", true, 72);
+      if (r.scan_error) throw new Error(r.scan_error);
+      $("one-answers").value = r.answers_text || "";
+      if (r.version && sc(sid).set_codes.indexOf(r.version) >= 0) $("one-set").value = r.version;
+      if (r.register_number && !$("one-reg").value) $("one-reg").value = r.register_number;
+      if (r.booklet_serial && !$("one-booklet").value) $("one-booklet").value = r.booklet_serial;
+      if (r.annotated_b64) { one.image = OMRCrypto.unb64(r.annotated_b64); one.annotated = true; }
+      msg("one-msg", "Filled in from the photo" + (r.version ? " (set " + r.version + ")" : "") + ". Check the numbers and answers, then press Check score.", "ok");
+      renderOne();
+    } catch (e) { console.error(e); msg("one-msg", e.message || "Could not read this photo.", "bad"); }
+    finally { btn.disabled = false; }
+  });
+  async function gradeOne() {
+    var sid = $("one-subject").value, reg = OMRCrypto.digits($("one-reg").value), bk = OMRCrypto.digits($("one-booklet").value);
+    if (!sid) throw new Error("Choose the exam and subject.");
+    if (reg.length < 5) throw new Error("Enter the candidate's register number.");
+    if ((S.cfg.results_lookup || "register_booklet") !== "register" && bk.length < 4) throw new Error("Enter the booklet number (candidates need it to find their result).");
+    msg("one-msg", OMREngine.isLoaded() ? "Scoring…" : "Loading the checker (first time only)…");
+    var r = await OMREngine.call("omr_grade_manual", sid, $("one-set").value, $("one-answers").value);
+    if (r.error) throw new Error(r.error);
+    r.register_number = reg; r.booklet_serial = bk; r.name = $("one-name").value.trim().slice(0, 80);
+    r.image = one.image; r.file = one.photo || "typed by admin";
+    return r;
+  }
+  function scoreLine(r) {
+    var g = r.grading, c = g.counts;
+    return "Score " + fmt(g.score) + " / " + fmt(g.max_score) + ": " + c.correct + " correct, " + c.wrong + " wrong, " + c.skipped + " option " + r.five + ", " + c.blank + " blank, " + c.multiple + " multiple.";
+  }
+  $("one-check").addEventListener("click", async function () {
+    try { msg("one-msg", scoreLine(await gradeOne()), "ok"); } catch (e) { msg("one-msg", e.message, "bad"); }
+  });
+  $("one-save").addEventListener("click", async function () {
+    var btn = this; btn.disabled = true;
+    try {
+      var r = await gradeOne();
+      await publishRows([r], "one-msg");
+      msg("one-msg", "Published. " + scoreLine(r) + " The candidate can see it in about 1 to 2 minutes.", "ok");
+      $("one-answers").value = ""; $("one-reg").value = ""; $("one-booklet").value = ""; $("one-name").value = ""; $("one-photo").value = "";
+      one = { image: null, photo: "", annotated: false }; $("one-pick").innerHTML = '<span class="cam" aria-hidden="true">📷</span>Choose a photo of the sheet'; renderOne();
+    } catch (e) { console.error(e); msg("one-msg", e.message, "bad"); }
     finally { btn.disabled = false; }
   });
 
@@ -368,7 +525,7 @@
       (q ? list.length + " match" + (list.length === 1 ? "" : "es") + "." : list.length ? "Showing the latest " + list.length + "." : "");
     $("search-results").innerHTML = list.slice(0, 50).map(function (e) {
       var i = S.index.indexOf(e), c = e.counts || {};
-      return '<div class="cand"><div class="cand-head"><div><b>' + esc(e.name || "Register " + e.reg) + "</b><br><span class='muted'>" + esc(e.subject_name) +
+      return '<div class="cand"><div class="cand-head"><div><b>' + esc(e.name || "Register " + e.reg) + "</b><br><span class='muted'>" + esc((e.exam_short ? e.exam_short + " · " : "") + e.subject_name) +
         " · Set " + esc(e.set) + "</span></div><div class='cand-score'>" + fmt(e.score) + "<small> / " + fmt(e.max) + "</small></div></div>" +
         '<div class="facts" style="justify-content:flex-start"><span>Register <b>' + esc(e.reg) + "</b></span><span>Booklet <b>" + esc(e.booklet) +
         "</b></span><span>Published " + esc(e.published) + "</span><span>Photo " + esc(e.photo) + "</span></div>" +

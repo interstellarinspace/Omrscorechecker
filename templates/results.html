@@ -1,17 +1,23 @@
 {% extends "base.html" %}
 {% set by_booklet = cfg.get("results_lookup", "register_booklet") != "register" %}
-{% set description = "Search your " ~ cfg.exam_short ~ " result by register number: see your OMR marks and your marked OMR sheet, and download your score card." %}
-{% set og_title = cfg.exam_short ~ " results by register number" %}
-{% block title %}{{ cfg.exam_short }} Results by Register Number | {{ cfg.site_name }}{% endblock %}
+{% set description = "Search your result by register number and exam (" ~ (exams|map(attribute="name")|join(", ")) ~ "): see your OMR marks and your marked OMR sheet, and download your score card." %}
+{% set og_title = "Search results by register number and exam" %}
+{% block title %}Search by Register Number and Exam | {{ cfg.site_name }}{% endblock %}
 {% block meta %}{% include "seo_head.html" %}{% endblock %}
 {% block body %}
 <div id="intro">
 <div class="hero">
-  <h1>Find your marks</h1>
-  <p>Search by register number. If the exam admin has checked your OMR sheet, you'll see your marks and your marked OMR sheet, and can download your score card.</p>
+  <h1>Search by register number and exam</h1>
+  <p>Choose your exam and subject and type your register number. If the exam admin has checked your OMR sheet, you'll see your marks and your marked OMR sheet, and can download your score card.</p>
 </div>
 </div>
 <form class="card" id="scan-form" autocomplete="off">
+  <label>Exam</label>
+  <div class="exam-chips" id="exam-chips">{% for e in exams %}<button type="button" data-exam="{{ e.id }}">{{ e.name }}</button>{% endfor %}</div>
+  <label for="paper">Paper</label>
+  <select id="paper"></select>
+  <div id="subject-wrap"><label for="subject-pick">Subject</label><select id="subject-pick"></select></div>
+  <input type="hidden" id="subject" value="">
   <label for="reg">Register number</label>
   <input type="text" id="reg" inputmode="numeric" placeholder="9 digits, e.g. 338401003" required>
   {% if by_booklet %}<label for="booklet">Question booklet number</label>
@@ -29,6 +35,8 @@
 {% include "_site_js.html" %}
 <script src="{{ url_for('static', filename='omr-crypto.js') }}"></script>
 <script src="{{ url_for('static', filename='result-view.js') }}"></script>
+<script>window.OMR_EXAMS = {{ exams_for_form|tojson }};</script>
+<script src="{{ url_for('static', filename='exam-picker.js') }}"></script>
 <script>
 (function () {
   var $ = function (id) { return document.getElementById(id); };
@@ -46,19 +54,26 @@
     bar.onclick = function (ev) { var b = ev.target.closest("button"); if (b) pick(list, +b.dataset.j); };
     window.OMRResult.render(list[i]);
   }
+  var picker = OMRPicker({ check: false });
   form.addEventListener("submit", async function (ev) {
     ev.preventDefault(); err("");
+    var sid = $("subject").value;
+    if (!sid) { err("Please choose your subject."); return; }
     var reg = OMRCrypto.digits($("reg").value), bk = BY_BOOKLET ? OMRCrypto.digits($("booklet").value) : "";
     if (reg.length < 5) { err("Please enter your full register number."); return; }
     if (BY_BOOKLET && bk.length < 4) { err("Please enter your full booklet number."); return; }
-    var btn = form.querySelector("button"); btn.disabled = true; $("busy").style.display = "block";
+    var btn = form.querySelector("button[type=submit]"); btn.disabled = true; $("busy").style.display = "block";
     try {
       var d = await OMRCrypto.derive(reg, bk);
       var res = await fetch(BASE + d.id + ".json", { cache: "no-store" });
-      if (res.status === 404) { err("No result found for " + (BY_BOOKLET ? "these numbers. Check both numbers" : "this register number. Check the number") + ", or your marks may not be published yet."); return; }
+      var subjName = (picker.exam().subjects.filter(function (s) { return s.id === sid; })[0] || {}).name || "this subject";
+      var none = "No " + picker.exam().short + " " + subjName + " result found for " + (BY_BOOKLET ? "these numbers. Check both numbers" : "this register number. Check the number") + ", or the marks may not be published yet.";
+      if (res.status === 404) { err(none); return; }
       if (!res.ok) throw new Error("HTTP " + res.status);
       var data = await OMRCrypto.open(await res.text(), d.key);
-      pick(data.results || [data], 0);
+      var list = (data.results || [data]).filter(function (r) { return r.subject === sid; });
+      if (!list.length) { err(none); return; }
+      pick(list, 0);
     } catch (e) {
       console.error(e); err("Could not look up your result right now. Check your internet connection and try again.");
     } finally { btn.disabled = false; $("busy").style.display = "none"; }

@@ -1,7 +1,8 @@
 {% extends "base.html" %}
-{% set description = "Upload a photo of your " ~ cfg.exam_short ~ " OMR sheet and get your score in seconds. Answer keys for General Knowledge, Kannada and Science, sets A1, B1, C1 and D1, with 0.25 negative marking." %}
-{% set og_title = cfg.exam_short ~ " OMR score calculator and answer key" %}
-{% block title %}{{ cfg.exam_short }} OMR Score Calculator & Answer Key (GK, Kannada, Science) | {{ cfg.site_name }}{% endblock %}
+{% set exam_names = exams|map(attribute="name")|join(", ") %}
+{% set description = "Upload a photo of your OMR sheet and get your score in seconds. Answer keys and score calculator for " ~ exam_names ~ ". KREIS 2026 Paper I and Paper II (Science, Computer, Mathematics, Kannada, English, Urdu)." %}
+{% set og_title = "OMR score calculator and answer keys: " ~ exam_names %}
+{% block title %}OMR Score Calculator & Answer Keys: {{ exam_names }} | {{ cfg.site_name }}{% endblock %}
 {% block meta %}
 {% include "seo_head.html" %}
 <script type="application/ld+json">
@@ -29,18 +30,20 @@
 {% block body %}
 <div id="intro">
 <div class="hero">
-  <h1>{{ cfg.exam_short }} OMR score calculator</h1>
-  <p>Photograph your OMR answer sheet and see your marks in seconds, checked against the provisional answer key. KREIS ಕೀ ಉತ್ತರಗಳು 2026.</p>
-  <div class="chips"><span>{% for s in cfg.subjects %}{{ s.short or s.name }}{% if not loop.last %} · {% endif %}{% endfor %}</span><span>Sets {{ cfg.set_codes|join(" ") }}</span><span>Free</span><span>Score card PDF</span></div>
+  <h1>OMR score calculator</h1>
+  <p>Photograph your OMR answer sheet and see your marks in seconds, checked against the provisional answer key. ಕೀ ಉತ್ತರಗಳು ಮತ್ತು ಅಂಕ ಲೆಕ್ಕ.</p>
+  <div class="chips">{% for e in exams %}<span>{{ e.name }}</span>{% endfor %}<span>Free</span><span>Score card PDF</span></div>
 </div>
 </div>
 {% if error %}<div class="err">{{ error }}</div>{% endif %}
 <form class="card" id="scan-form" method="post" enctype="multipart/form-data"{% if not static_site %} onsubmit="document.getElementById('busy').style.display='block';this.querySelector('button').disabled=true"{% endif %}>
-  <label for="subject">Subject</label>
-  <select id="subject" name="subject" required>
-    <option value="" disabled {% if not subject %}selected{% endif %}>Choose your paper</option>
-    {% for s in cfg.subjects %}<option value="{{ s.id }}" {% if subject == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
-  </select>
+  <label>Exam</label>
+  <div class="exam-chips" id="exam-chips">{% for e in exams %}<button type="button" data-exam="{{ e.id }}">{{ e.name }}</button>{% endfor %}</div>
+  <label for="paper">Paper</label>
+  <select id="paper"></select>
+  <div id="subject-wrap"><label for="subject-pick">Subject</label><select id="subject-pick"></select></div>
+  <input type="hidden" id="subject" name="subject" value="{{ subject or '' }}">
+  <p class="note" id="exam-note" hidden></p>
   <label for="name">Your name</label>
   <input type="text" id="name" name="name" autocomplete="name" placeholder="Optional">
   <label>Photo of your answer sheet</label>
@@ -65,8 +68,8 @@
 {% endif %}
 <section class="card">
   <h2>Answer keys</h2>
-  <p>Provisional answer keys for all four versions (A1, B1, C1, D1) of the {{ cfg.exam_full }}:</p>
-  <ul>{% for s in cfg.subjects %}<li><a href="{{ url_for('answer_key', subject=s.slug) }}">{{ cfg.exam_short }} {{ s.name }} answer key</a></li>{% endfor %}</ul>
+  {% for e in exams %}<h3 style="margin:14px 0 6px">{{ e.short }}</h3>
+  <ul style="margin:0">{% for s in exam_subjects(e) %}<li>{% if has_keys(s) %}<a href="{{ key_url(s) }}">{{ e.short }} {{ s.name }} answer key</a>{% else %}{{ s.name }} <span class="badge soon">Key coming soon</span>{% endif %}</li>{% endfor %}</ul>{% endfor %}
 </section>
 <section class="card faq">
   <h2>How it works</h2>
@@ -85,7 +88,10 @@
 <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
 <script src="{{ url_for('static', filename='omr-engine.js') }}"></script>
 <script src="{{ url_for('static', filename='browser-scan.js') }}"></script>{% endif %}
+<script>window.OMR_EXAMS = {{ exams_for_form|tojson }};</script>
+<script src="{{ url_for('static', filename='exam-picker.js') }}"></script>
 <script>
+  OMRPicker({ check: true });
   document.getElementById('sheet').addEventListener('change', function () {
     var f = this.files[0]; if (!f) return;
     var img = document.createElement('img'); img.src = URL.createObjectURL(f); img.alt = 'Your answer sheet';

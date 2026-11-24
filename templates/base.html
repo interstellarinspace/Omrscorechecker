@@ -53,6 +53,15 @@
   .tabs { max-width:720px; margin:0 auto; padding:0 12px 10px; display:flex; gap:8px; overflow-x:auto; scrollbar-width:none; }
   .tabs a { flex:none; color:#fff; text-decoration:none; font-size:.9rem; font-weight:600; padding:6px 12px; border-radius:999px; background:rgba(255,255,255,.14); }
   .tabs a.on { background:#fff; color:var(--accent); }
+  .tabs .sep { flex:none; width:1px; background:rgba(255,255,255,.35); margin:4px 2px; }
+  .badge { display:inline-block; font-size:.78rem; font-weight:700; border-radius:999px; padding:2px 9px; }
+  .badge.soon { background:var(--warnbg); color:var(--warn); } .badge.ready { background:var(--okbg); color:var(--ok); }
+  .exam-chips { display:flex; flex-wrap:wrap; gap:8px; }
+  .exam-chips button { border:1.5px solid var(--accent); background:#fff; color:var(--accent); font-weight:700; font-size:.98rem; padding:9px 16px; border-radius:999px; cursor:pointer; }
+  .exam-chips button.on { background:var(--grad); color:#fff; border-color:transparent; }
+  .papers { display:grid; gap:10px; }
+  .paper-row { display:flex; justify-content:space-between; align-items:center; gap:10px; padding:10px 12px; border:1px solid var(--line); border-radius:12px; background:#fcfcff; text-decoration:none; color:var(--ink); }
+  .paper-row:hover { border-color:var(--accent); }
   .hero { background:var(--grad); color:#fff; border-radius:18px; padding:20px 18px; margin-bottom:16px; position:relative; overflow:hidden; }
   .hero::after { content:""; position:absolute; right:-40px; top:-40px; width:160px; height:160px; border-radius:50%; background:rgba(255,255,255,.12); }
   .hero h1 { margin:0 0 6px; color:#fff; }
@@ -105,17 +114,17 @@
   </div>
   <nav class="tabs">
     <a href="{{ url_for('index') }}"{% if request.endpoint == 'index' %} class="on"{% endif %}>Check score</a>
-    <a href="{{ url_for('results_page') }}"{% if request.endpoint == 'results_page' %} class="on"{% endif %}>Results</a>
-    {% for s in cfg.subjects %}<a href="{{ url_for('answer_key', subject=s.slug) }}"{% if subj is defined and subj.id == s.id %} class="on"{% endif %}>{{ s.short or s.name }} key</a>{% endfor %}
+    {% for e in exams %}<a href="{{ url_for('exam_page', exam_id=e.id) }}"{% if (exam is defined and exam and exam.id == e.id) %} class="on"{% endif %}>{{ e.name }}</a>{% endfor %}
+    <span class="sep"></span><a href="{{ url_for('results_page') }}"{% if request.endpoint == 'results_page' %} class="on"{% endif %}>Search by Register No. &amp; Exam</a>
   </nav>
 </header>
 <main>{% block body %}{% endblock %}</main>
 <footer class="foot muted">
-  <p>OMR Score Check is an independent tool. It is not run by or affiliated with the Karnataka Examinations Authority (KEA).
-  Answer keys are the provisional keys published by KEA; the final keys and results announced by KEA are what count.</p>
+  <p>OMR Score Check is an independent tool. It is not run by or affiliated with KEA, KPSC or any exam authority.
+  Answer keys are the provisional keys published by the exam authority; the final keys and results they announce are what count.</p>
   <p><a href="{{ url_for('index') }}">Check your score</a> ·
-  {% for s in cfg.subjects %}<a href="{{ url_for('answer_key', subject=s.slug) }}">{{ s.name }} answer key</a> · {% endfor %}
-  <a href="{{ url_for('results_page') }}">Results by register number</a> ·
+  {% for e in exams %}<a href="{{ url_for('exam_page', exam_id=e.id) }}">{{ e.name }} answer keys</a> · {% endfor %}
+  <a href="{{ url_for('results_page') }}">Search by register number and exam</a> ·
   <a href="{{ url_for('privacy') }}">Privacy</a></p>
 </footer>
 <script>

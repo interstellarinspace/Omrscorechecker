@@ -8,6 +8,7 @@
   var current = null, standalone = false, pushed = false, cardCache = {};
   var pickHTML = $("pick") ? $("pick").innerHTML : "";
 
+  function examOf(r) { return (r && r.exam_short) || SITE.exam || ""; }
   function fmt(x) { return (Math.round(x * 100) / 100).toString(); }
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
   function show(el, on) { if (el) el.hidden = !on; }
@@ -36,7 +37,7 @@
     current = r; cardCache = {}; standalone = !!opts.standalone;
     var g = r.grading, m = r.marking || {}, five = r.five || "5";
     $("res-who").textContent = r.name ? r.name : "Your result";
-    $("res-subject").textContent = (SITE.exam ? SITE.exam + " · " : "") + (r.subject_name || "");
+    $("res-subject").textContent = (examOf(r) ? examOf(r) + " · " : "") + (r.subject_name || "");
     $("res-error").textContent = r.error || ""; show($("res-error"), !!r.error);
     show($("res-scorebox"), !!g); show($("res-share"), !!g);
     if (g) {
@@ -138,7 +139,7 @@
     ctx.fillStyle = "rgba(255,255,255,.10)"; ctx.beginPath(); ctx.arc(W - 60, 70, 210, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(70, H - 40, 170, 0, 7); ctx.fill();
     ctx.textAlign = "center"; ctx.fillStyle = "#fff";
     ctx.font = "800 54px system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"; ctx.fillText(SITE.name || "OMR Score Check", W / 2, 110);
-    ctx.font = "600 32px system-ui, sans-serif"; ctx.globalAlpha = 0.9; ctx.fillText((SITE.exam || "") + " · Score card", W / 2, 162); ctx.globalAlpha = 1;
+    ctx.font = "600 32px system-ui, sans-serif"; ctx.globalAlpha = 0.9; ctx.fillText((examOf(r) ? examOf(r) + " · " : "") + "Score card", W / 2, 162); ctx.globalAlpha = 1;
     // panel
     ctx.save(); ctx.shadowColor = "rgba(30,20,90,.35)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
     rr(ctx, 70, 220, W - 140, 960, 44); ctx.fillStyle = "#fff"; ctx.fill(); ctx.restore();
@@ -175,7 +176,7 @@
     return new Promise(function (ok) { drawCard(current, full).toBlob(function (b) { cardCache[k] = b; ok(b); }, "image/png"); });
   }
   function baseName() {
-    return ((SITE.exam || "OMR") + " score " + (current.subject_name || "")).replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    return ((examOf(current) || "OMR") + " score " + (current.subject_name || "")).replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "");
   }
   function download(blob, name) {
     var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
@@ -234,7 +235,7 @@
   // ---------- sharing ----------
   function shareText() {
     var g = current.grading;
-    return "I scored " + fmt(g.score) + "/" + fmt(g.max_score) + " in " + (SITE.exam ? SITE.exam + " " : "") + current.subject_name +
+    return "I scored " + fmt(g.score) + "/" + fmt(g.max_score) + " in " + (examOf(current) ? examOf(current) + " " : "") + current.subject_name +
       " (set " + (current.version || "?") + ") on " + (SITE.name || "OMR Score Check") + ". Check your score free: " + (SITE.url || location.href);
   }
   async function shareCard(appName) {

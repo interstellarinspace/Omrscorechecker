@@ -56,9 +56,15 @@ def subject_name(c, sid):
 
 
 def process(image_bytes, subject, name=""):
-    c = cfg()
+    subj, exam = K.find_subject(cfg(), subject)
+    exam = exam or {}
+    if exam.get("omr_layout", "kea_kreis") != "kea_kreis":
+        raise S.ScanError(f"Reading {exam.get('name', '')} OMR sheets is coming soon. "
+                          f"You can see the answer key on the {exam.get('name', '')} page.")
+    c = K.subject_config(cfg(), subject)
     res = S.scan(image_bytes, c["num_questions"])
     out = {"subject": subject, "subject_name": subject_name(c, subject), "name": name,
+           "exam": exam.get("id", ""), "exam_short": exam.get("short", ""),
            "version": res["version"], "register_number": res["register_number"],
            "register_complete": res["register_complete"], "booklet_serial": res["booklet_serial"],
            "grading": None, "error": None}
@@ -70,7 +76,7 @@ def process(image_bytes, subject, name=""):
     else:
         key = K.load_key(subject, res["version"], c)
         if key is None:
-            out["error"] = f"The answer key for {out['subject_name']}, set {res['version']} has not been added yet."
+            out["error"] = f"The answer key for {out['subject_name']}, set {res['version']} is coming soon. Please check again later."
         else:
             out["grading"] = K.grade(res["answers"], key, c)
     out["answers"] = [{"q": a["q"], "answer": a["answer"], "status": a["status"]} for a in res["answers"]]
@@ -162,15 +168,51 @@ def api_scan():
     return jsonify(out)
 
 
-@app.route("/kreis-2026/<subject>")
-def answer_key(subject):
-    c = cfg()
-    subj = next((s for s in c["subjects"] if s["slug"] == subject), None)
-    if not subj:
-        abort(404)
-    keys = {code: (K.load_key(subj["id"], code, c) or {}) for code in c["set_codes"]}
-    return render_template("answer_key.html", subj=subj, keys=keys)
+def exam_of(c, exam_id):
+    return next((e for e in c.get("exams", []) if e["id"] == exam_id), None)
 
+
+def key_url(s):
+    """Answer-key page address of a subject (the KREIS pages keep their original /kreis-2026/ addresses)."""
+    e = exam_of(cfg(), s.get("exam")) or {}
+    return url_for("answer_key", exam=e.get("slug", "kreis-2026"), subject=s["slug"])
+
+
+def has_keys(c, s):
+    sc = K.subject_config(c, s["id"])
+    return any(K.load_key(s["id"], code, sc) for code in sc["set_codes"])
+
+
+@app.context_processor
+def exam_helpers():
+    c = cfg()
+    return {"key_url": key_url, "exams": c.get("exams", []),
+            "exam_subjects": lambda e: [s for s in c["subjects"] if s.get("exam") == e["id"]],
+            "has_keys": lambda s: has_keys(c, s), "exams_for_form": [
+                {"id": e["id"], "name": e["name"], "short": e.get("short", e["name"]), "scan": e.get("omr_layout") == "kea_kreis",
+                 "subjects": [{"id": s["id"], "paper": s.get("paper", ""), "subject": s.get("subject", s["name"]), "name": s["name"],
+                               "key": has_keys(c, s)} for s in c["subjects"] if s.get("exam") == e["id"]]}
+                for e in c.get("exams", [])]}
+
+
+@app.route("/<exam>/<subject>")
+def answer_key(exam, subject):
+    c = cfg()
+    e = next((x for x in c.get("exams", []) if x["slug"] == exam), None)
+    subj = next((s for s in c["subjects"] if s["slug"] == subject and s.get("exam") == (e or {}).get("id")), None)
+    if not e or not subj:
+        abort(404)
+    sc = K.subject_config(c, subj["id"])
+    keys = {code: (K.load_key(subj["id"], code, sc) or {}) for code in sc["set_codes"]}
+    return render_template("answer_key.html", subj=subj, exam=e, keys=keys, sc=sc, any_key=any(keys.values()))
+
+
+@app.route("/exams/<exam_id>")
+def exam_page(exam_id):
+    e = exam_of(cfg(), exam_id)
+    if not e:
+        abort(404)
+    return render_template("exam.html", exam=e)
 
 
 @app.route("/robots.txt")
@@ -184,7 +226,9 @@ def robots():
 def sitemap():
     c = cfg()
     base = SITE_URL or request.url_root.rstrip("/")
-    paths = ["/", "/results"] + [f"/kreis-2026/{s['slug']}" for s in c["subjects"]] + ["/privacy"]
+    slug = {e["id"]: e["slug"] for e in c.get("exams", [])}
+    paths = (["/", "/results"] + [f"/exams/{e['id']}" for e in c.get("exams", [])]
+             + [f"/{slug.get(s.get('exam'), 'kreis-2026')}/{s['slug']}" for s in c["subjects"] if has_keys(c, s)] + ["/privacy"])
     today = dt.date.today().isoformat()
     urls = "".join(f"<url><loc>{base}{p}</loc><lastmod>{today}</lastmod></url>" for p in paths)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>'

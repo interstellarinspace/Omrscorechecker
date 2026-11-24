@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% set subs = exam_subjects(exam) %}
+{% set description = exam.full ~ ": answer keys for " ~ (subs|map(attribute="name")|join(", ")) ~ ". Check your score from a photo of your OMR sheet." %}
+{% set og_title = exam.short ~ " answer keys and OMR score calculator" %}
+{% block title %}{{ exam.short }} Answer Keys & OMR Score Calculator | {{ cfg.site_name }}{% endblock %}
+{% block meta %}{% include "seo_head.html" %}{% endblock %}
+{% block body %}
+<div class="hero">
+  <h1>{{ exam.short }} answer keys</h1>
+  <p>{{ exam.full }}.{% if exam.key_note %} {{ exam.key_note }}{% endif %}</p>
+</div>
+{% if exam.omr_layout == "kea_kreis" %}
+<a class="btn" href="{{ url_for('index') }}?exam={{ exam.id }}">📷 Check my {{ exam.name }} score from a photo of my OMR sheet</a>
+<p></p>
+{% else %}
+<p class="note">Checking {{ exam.name }} scores from a photo of the OMR sheet is coming soon. Answer keys appear here as soon as they are released.</p>
+{% endif %}
+{% for paper, items in subs|groupby("paper") %}
+<section class="card">
+  <h2>{{ paper }}</h2>
+  <div class="papers">
+  {% for s in items %}
+    {% if has_keys(s) %}<a class="paper-row" href="{{ key_url(s) }}"><span><b>{{ s.subject }}</b></span><span class="badge ready">Answer key ›</span></a>
+    {% else %}<div class="paper-row"><span><b>{{ s.subject }}</b></span><span class="badge soon">Key coming soon</span></div>{% endif %}
+  {% endfor %}
+  </div>
+</section>
+{% endfor %}
+<p class="muted">Looking for another subject? It will be added here once its answer key is released. Already checked by your exam admin? See your <a href="{{ url_for('results_page') }}">result by register number</a>.</p>
+{% endblock %}
