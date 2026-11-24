@@ -420,23 +420,9 @@
     var out = [];
     for (var i = 0; i < list.length; i++) {
       var f = list[i];
-      if (!(/\.pdf$/i.test(f.name) || f.type === "application/pdf")) {
-        out.push({ name: f.name, bytes: (function (f) { return async function () { return new Uint8Array(await f.arrayBuffer()); }; })(f) });
-        continue;
-      }
+      if (!OMRPdf.isPdf(f)) { out.push({ name: f.name, bytes: (function (f) { return async function () { return new Uint8Array(await f.arrayBuffer()); }; })(f) }); continue; }
       $("bulk-status").textContent = "Opening " + f.name + "…";
-      await loadScript(PDFJS);
-      window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
-      var doc = await window.pdfjsLib.getDocument({ data: new Uint8Array(await f.arrayBuffer()) }).promise;
-      for (var p = 1; p <= doc.numPages; p++) out.push({ name: f.name + " page " + p, bytes: (function (doc, p) { return async function () {
-        var page = await doc.getPage(p), v = page.getViewport({ scale: 1 }), scale = 2200 / Math.max(v.width, v.height);
-        v = page.getViewport({ scale: scale });
-        var cv = document.createElement("canvas"); cv.width = Math.round(v.width); cv.height = Math.round(v.height);
-        var ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height);
-        await page.render({ canvasContext: ctx, viewport: v }).promise;
-        var blob = await new Promise(function (ok) { cv.toBlob(ok, "image/jpeg", 0.9); });
-        return new Uint8Array(await blob.arrayBuffer());
-      }; })(doc, p) });
+      out = out.concat(await OMRPdf.pages(f));
     }
     return out;
   }
@@ -564,6 +550,13 @@
   }
   $("one-photo").addEventListener("change", async function () {
     var f = this.files[0]; one.raw = f || null; one.photo = f ? f.name : ""; one.annotated = false; one.image = null;
+    if (f && OMRPdf.isPdf(f)) {
+      try {
+        msg("one-msg", "Opening the PDF…");
+        var pg = (await OMRPdf.pages(f))[0], blob = await pg.blob();
+        f = new File([blob], f.name.replace(/\.pdf$/i, "") + ".jpg", { type: "image/jpeg" }); one.raw = f; msg("one-msg", "");
+      } catch (e) { console.error(e); msg("one-msg", e.message || "This PDF could not be opened.", "bad"); f = null; one.raw = null; }
+    }
     if (f) {
       try { one.image = await compress(f); } catch (e) { msg("one-msg", "This photo could not be opened.", "bad"); }
       $("one-pick").innerHTML = '<img alt="Sheet photo" src="' + URL.createObjectURL(f) + '">';

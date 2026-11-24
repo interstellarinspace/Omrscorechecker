@@ -25,15 +25,27 @@
     ev.preventDefault();
     var file = $("sheet").files[0], subject = $("subject").value;
     if (!subject) { formError("Please choose your subject."); return; }
-    if (!file) { formError("Please choose a photo of your answer sheet."); return; }
+    if (!file) { formError("Please choose a photo or PDF of your answer sheet."); return; }
     formError("");
     try {
       busy(true, window.OMREngine.isLoaded() ? "Reading your sheet…" : "Downloading the scanner (first time only)…");
       await load();
       busy(true, "Reading your sheet…");
       await new Promise(function (r) { setTimeout(r, 30); });
-      var data = new Uint8Array(await file.arrayBuffer());
-      var out = await window.OMREngine.call("omr_run", data, subject, $("name").value.trim());
+      var out;
+      if (window.OMRPdf && window.OMRPdf.isPdf(file)) {
+        // A KEA OMR PDF: use the first page that reads as an OMR sheet.
+        busy(true, "Opening the PDF…");
+        var pages = await window.OMRPdf.pages(file);
+        for (var i = 0; i < pages.length && i < 5; i++) {
+          busy(true, "Reading your sheet" + (pages.length > 1 ? " (page " + (i + 1) + ")" : "") + "…");
+          out = await window.OMREngine.call("omr_run", await pages[i].bytes(), subject, $("name").value.trim());
+          if (!out.scan_error) break;
+        }
+        if (!pages.length) { formError("This PDF has no pages."); return; }
+      } else {
+        out = await window.OMREngine.call("omr_run", new Uint8Array(await file.arrayBuffer()), subject, $("name").value.trim());
+      }
       if (out.scan_error) { formError(out.scan_error); return; }
       window.OMRResult.render(out);
     } catch (e) {

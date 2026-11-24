@@ -106,9 +106,9 @@
       <div><label for="one-booklet">Booklet number <span class="muted">(optional)</span></label><input type="text" id="one-booklet" inputmode="numeric"></div>
       <div><label for="one-name">Name <span class="muted">(optional)</span></label><input type="text" id="one-name"></div>
     </div>
-    <label>OMR sheet photo <span class="muted">(optional)</span></label>
-    <label class="pick" for="one-photo" id="one-pick"><span class="cam" aria-hidden="true">📷</span>Choose a photo of the sheet</label>
-    <input type="file" id="one-photo" accept="image/*">
+    <label>OMR sheet photo or PDF <span class="muted">(optional)</span></label>
+    <label class="pick" for="one-photo" id="one-pick"><span class="cam" aria-hidden="true">📷</span>Choose a photo or PDF of the sheet</label>
+    <input type="file" id="one-photo" accept="image/*,.pdf,application/pdf">
     <button class="btn secondary" type="button" id="one-read" hidden style="margin-top:10px">Read the answers from this photo</button>
     <label for="one-answers">Candidate's answers</label>
     <textarea id="one-answers" rows="6" placeholder="One per question in order, e.g. 3 1 0 4 2 *  …   or one per line: 1 3, 2 1, 3 0 …"></textarea>
@@ -200,7 +200,7 @@
     <label for="bulk-subject">Subject</label>
     <select id="bulk-subject"></select>
     <div id="bulk-layout" class="note" hidden><p id="bulk-layout-text" style="margin:0 0 8px"></p><button class="btn secondary" type="button" id="bulk-layout-on">Use the KEA OMR sheet for this exam</button></div>
-    <label>OMR sheet photos</label>
+    <label>OMR sheet photos or PDFs</label>
     <label class="pick" for="bulk-files" id="bulk-pick"><span class="cam" aria-hidden="true">🗂️</span>Choose photos or PDFs (you can select many at once; a KEA centre PDF is read page by page)</label>
     <input type="file" id="bulk-files" accept="image/*,.pdf,application/pdf" multiple>
     <p></p>
@@ -218,6 +218,7 @@
 <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
 <script src="{{ asset('omr-engine.js') }}"></script>
 <script src="{{ asset('omr-crypto.js') }}"></script>
+<script src="{{ asset('pdf-pages.js') }}"></script>
 <script src="{{ asset('manage.js') }}"></script>
 <p class="muted" style="text-align:right">Admin page version {{ asset('manage.js').split('v=')[-1] }}</p>
 {% endblock %}

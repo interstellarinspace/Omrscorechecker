@@ -46,9 +46,9 @@
   <p class="note" id="exam-note" hidden></p>
   <label for="name">Your name</label>
   <input type="text" id="name" name="name" autocomplete="name" placeholder="Optional">
-  <label>Photo of your answer sheet</label>
-  <label class="pick" for="sheet" id="pick"><span class="cam" aria-hidden="true">📷</span>Tap to take a photo or choose one from your gallery</label>
-  <input type="file" id="sheet" name="sheet" accept="image/*" required>
+  <label>Photo or PDF of your answer sheet</label>
+  <label class="pick" for="sheet" id="pick"><span class="cam" aria-hidden="true">📷</span>Tap to take a photo, or choose a photo or the OMR PDF from KEA</label>
+  <input type="file" id="sheet" name="sheet" accept="image/*{% if static_site %},.pdf,application/pdf{% endif %}" required>
   <ul class="tips">
     <li>Lay the sheet flat in good light, without shadows across it.</li>
     <li>Both side edges with the small blue dashes must be in the photo.</li>
@@ -87,6 +87,7 @@
 <script src="{{ asset('result-view.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
 <script src="{{ asset('omr-engine.js') }}"></script>
+<script src="{{ asset('pdf-pages.js') }}"></script>
 <script src="{{ asset('browser-scan.js') }}"></script>{% endif %}
 <script>window.OMR_EXAMS = {{ exams_for_form|tojson }};</script>
 <script src="{{ asset('exam-picker.js') }}"></script>
@@ -94,6 +95,8 @@
   OMRPicker({ check: true });
   document.getElementById('sheet').addEventListener('change', function () {
     var f = this.files[0]; if (!f) return;
+    var p0 = document.getElementById('pick');
+    if (/\.pdf$/i.test(f.name) || f.type === 'application/pdf') { p0.innerHTML = '<span class="cam" aria-hidden="true">📄</span>'; p0.appendChild(document.createTextNode(f.name)); return; }
     var img = document.createElement('img'); img.src = URL.createObjectURL(f); img.alt = 'Your answer sheet';
     var p = document.getElementById('pick'); p.innerHTML = ''; p.appendChild(img);
   });
