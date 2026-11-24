@@ -6,6 +6,26 @@
    "published": 189,
    "failed": 3,
    "centre": "LAL BAHADUR SHASTRI GOVT FIRST GRADE COLLEGE ,DINNUR ROAD RT NAGAR, NEAR PUSHPAN"
+  },
+  "PDP26|BENGALURU|General Knowledge Paper (RPC)|140": {
+   "sheets": 0,
+   "note": "no file"
+  },
+  "PDP26|BENGALURU|General Knowledge Paper (RPC)|141": {
+   "sheets": 0,
+   "note": "no file"
+  },
+  "PDP26|BENGALURU|General Knowledge Paper (RPC)|142": {
+   "sheets": 0,
+   "note": "no file"
+  },
+  "PDP26|BENGALURU|General Knowledge Paper (RPC)|143": {
+   "sheets": 0,
+   "note": "no file"
+  },
+  "PDP26|BENGALURU|General Knowledge Paper (RPC)|144": {
+   "sheets": 0,
+   "note": "no file"
   }
  },
  "failures": [
@@ -20,10 +40,10 @@
   "published": 189,
   "failed": 3
  },
- "status": "running",
- "message": "Working on BENGALURU, General Knowledge Paper (RPC), centre 101.",
+ "status": "stopped",
+ "message": "Stopped by the admin. Press Start fetching to carry on.",
  "started": "2026-11-24T10:29:36Z",
- "updated": "2026-11-24T10:32:26Z",
+ "updated": "2026-11-24T10:33:23Z",
  "kea_exam_name": "PRISON DEPARTMENT RECRUITMENT (RPC)-2026 and COMPULSORY KANNADA EXAMINATION -2026 (21/11/2026)",
  "districts": [
   "BENGALURU"
