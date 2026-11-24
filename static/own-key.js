@@ -59,7 +59,7 @@
     try {
       $("own-keyinfo").className = "muted small"; $("own-keyinfo").textContent = E.isLoaded() ? "Reading the key…" : "Getting the key reader ready (first time only)…";
       await E.load();
-      var imgs = window.OMRPdf.isPdf(f) ? await window.OMRPdf.pages(f) : [{ page: 1, bytes: async function () { return new Uint8Array(await f.arrayBuffer()); } }];
+      var imgs = window.OMRPdf.isPdf(f) ? await window.OMRPdf.pages(f) : [{ page: 1, bytes: function () { return window.OMRPdf.imageBytes(f); } }];
       keyPages = [];
       for (var i = 0; i < imgs.length && i < 30; i++) {
         $("own-keyinfo").textContent = "Reading the key" + (imgs.length > 1 ? " (page " + (i + 1) + " of " + imgs.length + ")" : "") + "…";
@@ -171,7 +171,7 @@
             if (!out.scan_error) break;
           }
         } else {
-          out = await E.call("omr_run_custom", new Uint8Array(await f.arrayBuffer()), "", keys, JSON.stringify(sc), name);
+          out = await E.call("omr_run_custom", await window.OMRPdf.imageBytes(f), "", keys, JSON.stringify(sc), name);
         }
       }
       if (out.scan_error) {

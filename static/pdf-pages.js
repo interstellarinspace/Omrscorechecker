@@ -35,5 +35,25 @@
     })(p);
     return out;
   }
-  window.OMRPdf = { isPdf: isPdf, pages: pages, load: load };
+  // A photo as JPEG bytes the scanner can open: very large phone photos are scaled down (less
+  // memory on phones), and formats some phones save (HEIC on iPhone) are turned into JPEG where
+  // the browser can show them. Falls back to the file as it is.
+  async function imageBytes(file, maxSide) {
+    maxSide = maxSide || 3400;
+    try {
+      var url = URL.createObjectURL(file), img = new Image();
+      await new Promise(function (ok, fail) { img.onload = ok; img.onerror = fail; img.src = url; });
+      var w = img.naturalWidth, h = img.naturalHeight, sc = Math.min(1, maxSide / Math.max(w, h));
+      var isJpeg = /jpe?g$/i.test(file.type || file.name || "");
+      if (sc === 1 && isJpeg) { URL.revokeObjectURL(url); return new Uint8Array(await file.arrayBuffer()); }
+      var cv = document.createElement("canvas"); cv.width = Math.round(w * sc); cv.height = Math.round(h * sc);
+      var ctx = cv.getContext("2d"); ctx.fillStyle = "#fff"; ctx.fillRect(0, 0, cv.width, cv.height); ctx.drawImage(img, 0, 0, cv.width, cv.height);
+      URL.revokeObjectURL(url);
+      var blob = await new Promise(function (ok) { cv.toBlob(ok, "image/jpeg", 0.92); });
+      cv.width = cv.height = 0;
+      if (blob) return new Uint8Array(await blob.arrayBuffer());
+    } catch (e) { /* the scanner tries the original file */ }
+    return new Uint8Array(await file.arrayBuffer());
+  }
+  window.OMRPdf = { isPdf: isPdf, pages: pages, load: load, imageBytes: imageBytes };
 })();

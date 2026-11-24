@@ -44,7 +44,7 @@
         }
         if (!pages.length) { formError("This PDF has no pages."); return; }
       } else {
-        out = await window.OMREngine.call("omr_run", new Uint8Array(await file.arrayBuffer()), subject, $("name").value.trim());
+        out = await window.OMREngine.call("omr_run", await (window.OMRPdf ? window.OMRPdf.imageBytes(file) : file.arrayBuffer().then(function (b) { return new Uint8Array(b); })), subject, $("name").value.trim());
       }
       if (out.scan_error) { formError(out.scan_error); return; }
       window.OMRResult.render(out);

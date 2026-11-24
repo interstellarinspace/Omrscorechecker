@@ -178,7 +178,17 @@
   function baseName() {
     return ((examOf(current) || "OMR") + " score " + (current.subject_name || "")).replace(/[^A-Za-z0-9]+/g, "-").replace(/^-|-$/g, "");
   }
+  var IOS = /iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1);
   function download(blob, name) {
+    if (IOS && navigator.canShare) {
+      var file = new File([blob], name, { type: blob.type });
+      if (navigator.canShare({ files: [file] })) {
+        navigator.share({ files: [file], title: name }).catch(function (e) {
+          if (e && e.name !== "AbortError") window.open(URL.createObjectURL(blob), "_blank");
+        });
+        return;
+      }
+    }
     var a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(function () { URL.revokeObjectURL(a.href); }, 30000);
@@ -225,7 +235,7 @@
       }
       var blob = doc.output("blob");
       download(blob, baseName() + ".pdf");
-      note("Your result sheet PDF has been downloaded. Look for it in your Downloads or Files app.");
+      note(IOS ? "Choose Save to Files (or Books) to keep your result sheet PDF." : "Your result sheet PDF has been downloaded. Look for it in your Downloads or Files app.");
     } catch (e) {
       console.error(e);
       note("Could not make the PDF. Check your internet connection and try again.");

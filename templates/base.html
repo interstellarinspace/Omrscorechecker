@@ -2,7 +2,12 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="OMR Score">
+<meta name="format-detection" content="telephone=no">
+<link rel="manifest" href="{{ url_for('static', filename='manifest.webmanifest') }}">
 <title>{% block title %}OMR Score Check{% endblock %}</title>
 {% block meta %}<meta name="robots" content="noindex">{% endblock %}
 <meta name="theme-color" content="#7c3aed">
@@ -164,6 +169,16 @@
     #res-qs { break-inside:auto; } #res-qs > summary { list-style:none; color:#000; }
     #res-qs table { font-size:11px; } #res-qs td, #res-qs th { padding:2px 6px; }
     .ring { -webkit-print-color-adjust:exact; print-color-adjust:exact; } .stats div, .facts span { -webkit-print-color-adjust:exact; print-color-adjust:exact; }
+  }
+  html { -webkit-text-size-adjust:100%; text-size-adjust:100%; }
+  body { overflow-x:hidden; padding-left:env(safe-area-inset-left); padding-right:env(safe-area-inset-right); }
+  .foot { padding-bottom:calc(32px + env(safe-area-inset-bottom)); }
+  button, .btn, .pick, a { -webkit-tap-highlight-color:transparent; touch-action:manipulation; }
+  img, table, canvas { max-width:100%; }
+  @media (min-width:1024px) {
+    main, .top .bar, .tabs, .quote-wrap, .foot { max-width:880px; }
+    .card { padding:24px 28px; }
+    .grid2 { grid-template-columns:1fr 1fr 1fr; }
   }
 </style>
 </head>
