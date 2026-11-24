@@ -4,5 +4,5 @@
  "exam": "warder",
  "kea_exam": "PDP26",
  "districts": [],
- "stop": false
+ "stop": true
 }
