@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="light">
+<title>OMR Score Check</title>
+<link rel="stylesheet" href="app.css">
+</head>
+<body>
+<header class="bar"><span>OMR Score Check</span></header>
+<main>
+  <section id="form-view">
+    <p class="muted" id="exam-title"></p>
+    <div id="form-error" class="err" hidden></div>
+    <div class="card">
+      <label for="subject">Subject</label>
+      <select id="subject"><option value="">Loading…</option></select>
+      <label for="name">Your name</label>
+      <input type="text" id="name" placeholder="Optional" autocomplete="name">
+      <label>Photo of your answer sheet</label>
+      <button type="button" class="pick" id="pick">
+        <span id="pick-text">Tap to take a photo or choose one from your gallery</span>
+        <img id="preview" alt="" hidden>
+      </button>
+      <input type="file" id="file" accept="image/*" hidden>
+      <ul class="tips">
+        <li>Lay the sheet flat in good light, without shadows across it.</li>
+        <li>Both side edges with the small blue dashes must be in the photo.</li>
+        <li>Hold the phone straight above the sheet, sheet filling the photo.</li>
+      </ul>
+      <button type="button" class="btn" id="check" disabled>Check my answers</button>
+      <p id="busy" class="muted center" hidden>Reading your sheet…</p>
+    </div>
+  </section>
+
+  <section id="result-view" hidden>
+    <div id="res-error" class="err" hidden></div>
+    <div class="card">
+      <p class="muted" id="res-meta"></p>
+      <div class="score" id="res-score"></div>
+      <div class="stats" id="res-stats"></div>
+      <p class="muted small" id="res-marking"></p>
+    </div>
+    <div class="card" id="res-image-card">
+      <h2>How your sheet was read</h2>
+      <p class="muted small">Green ring: correct. Red ring: wrong, with the right answer ringed thinly in green. Orange: more than one bubble shaded. Blue: option 5 (not attempted), and the version, register and booklet numbers. If anything looks wrong, retake the photo.</p>
+      <img id="res-image" class="sheet" alt="Your sheet with answers marked">
+    </div>
+    <div class="card" id="res-table-card">
+      <h2>Question by question</h2>
+      <table id="res-table"></table>
+    </div>
+    <button type="button" class="btn secondary" id="again">Check another sheet</button>
+  </section>
+</main>
+<script src="config.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

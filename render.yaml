@@ -1,0 +1,16 @@
+# One-click hosting on Render (render.com): New > Blueprint > pick this repo.
+services:
+  - type: web
+    name: omr-scanner
+    runtime: docker
+    plan: starter
+    healthCheckPath: /health
+    envVars:
+      - key: OMR_ADMIN_PASSWORD
+        sync: false
+      - key: SECRET_KEY
+        generateValue: true
+    disk:
+      name: results
+      mountPath: /app/results
+      sizeGB: 1

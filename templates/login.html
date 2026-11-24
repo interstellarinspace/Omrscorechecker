@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}Admin login{% endblock %}
+{% block body %}
+<h1>Admin</h1>
+{% if bad %}<div class="err">Wrong password.</div>{% endif %}
+<form class="card" method="post">
+  <label for="pw">Password</label>
+  <input type="password" id="pw" name="password" autofocus>
+  <p></p><button class="btn">Log in</button>
+</form>
+{% endblock %}

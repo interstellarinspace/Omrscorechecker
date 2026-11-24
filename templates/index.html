@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% set description = "Upload a photo of your " ~ cfg.exam_short ~ " OMR sheet and get your score in seconds. Answer keys for General Knowledge, Kannada and Science, sets A1, B1, C1 and D1, with 0.25 negative marking." %}
+{% set og_title = cfg.exam_short ~ " OMR score calculator and answer key" %}
+{% block title %}{{ cfg.exam_short }} OMR Score Calculator & Answer Key (GK, Kannada, Science) | {{ cfg.site_name }}{% endblock %}
+{% block meta %}
+{% include "seo_head.html" %}
+<script type="application/ld+json">
+{{ {
+  "@context": "https://schema.org",
+  "@graph": [
+    {"@type": "WebApplication", "name": cfg.site_name, "url": site_url ~ "/",
+     "applicationCategory": "EducationalApplication", "operatingSystem": "Android, iOS, Web",
+     "description": description, "inLanguage": ["en", "kn"],
+     "offers": {"@type": "Offer", "price": "0", "priceCurrency": "INR"}},
+    {"@type": "FAQPage", "mainEntity": [
+      {"@type": "Question", "name": "How do I check my " ~ cfg.exam_short ~ " score from my OMR sheet?",
+       "acceptedAnswer": {"@type": "Answer", "text": "Choose your subject, take a clear photo of your OMR answer sheet (candidate copy) with both side edges visible, and upload it. The app reads your version code, register number and every answer, and scores it against the provisional answer key."}},
+      {"@type": "Question", "name": "What is the marking scheme?",
+       "acceptedAnswer": {"@type": "Answer", "text": "1 mark for each correct answer. 0.25 marks are deducted for each wrong answer, for option 5, for a question with no bubble shaded, and for a question with more than one bubble shaded."}},
+      {"@type": "Question", "name": "Which answer key is used?",
+       "acceptedAnswer": {"@type": "Answer", "text": "The provisional answer keys published by the Karnataka Examinations Authority on 22.11.2026 for Paper I General Knowledge and Paper II Kannada and Science, versions A1, B1, C1 and D1."}},
+      {"@type": "Question", "name": "Is my photo kept private?",
+       "acceptedAnswer": {"@type": "Answer", "text": "Your photo is used only to calculate your score and is seen only by the site administrator. It is never sold or shared."}}
+    ]}
+  ]
+}|tojson }}
+</script>
+{% endblock %}
+{% block body %}
+<h1>{{ cfg.exam_short }} OMR score calculator</h1>
+<p class="lead">Photograph your OMR answer sheet and see your marks in seconds, checked against the provisional answer key. KREIS ಕೀ ಉತ್ತರಗಳು 2026.</p>
+{% if error %}<div class="err">{{ error }}</div>{% endif %}
+<form class="card" method="post" enctype="multipart/form-data" onsubmit="document.getElementById('busy').style.display='block';this.querySelector('button').disabled=true">
+  <label for="subject">Subject</label>
+  <select id="subject" name="subject" required>
+    <option value="" disabled {% if not subject %}selected{% endif %}>Choose your paper</option>
+    {% for s in cfg.subjects %}<option value="{{ s.id }}" {% if subject == s.id %}selected{% endif %}>{{ s.name }}</option>{% endfor %}
+  </select>
+  <label for="name">Your name</label>
+  <input type="text" id="name" name="name" autocomplete="name" placeholder="Optional">
+  <label>Photo of your answer sheet</label>
+  <label class="pick" for="sheet" id="pick">Tap to take a photo or choose one from your gallery</label>
+  <input type="file" id="sheet" name="sheet" accept="image/*" required>
+  <ul class="tips">
+    <li>Lay the sheet flat in good light, without shadows across it.</li>
+    <li>Both side edges with the small blue dashes must be in the photo.</li>
+    <li>Hold the phone straight above the sheet, sheet filling the photo.</li>
+  </ul>
+  <p></p>
+  <button class="btn" type="submit">Check my answers</button>
+  <div id="busy">Reading your sheet…</div>
+</form>
+{% if play_url or appstore_url %}
+<div class="card"><h2>Get the app</h2><div class="stores">
+  {% if play_url %}<a class="btn" href="{{ play_url }}" rel="noopener">Google Play</a>{% endif %}
+  {% if appstore_url %}<a class="btn" href="{{ appstore_url }}" rel="noopener">App Store</a>{% endif %}
+</div></div>
+{% endif %}
+<section class="card">
+  <h2>Answer keys</h2>
+  <p>Provisional answer keys for all four versions (A1, B1, C1, D1) of the {{ cfg.exam_full }}:</p>
+  <ul>{% for s in cfg.subjects %}<li><a href="{{ url_for('answer_key', subject=s.slug) }}">{{ cfg.exam_short }} {{ s.name }} answer key</a></li>{% endfor %}</ul>
+</section>
+<section class="card faq">
+  <h2>How it works</h2>
+  <h3>How do I check my score from my OMR sheet?</h3>
+  <p>Choose your subject, take a clear photo of your OMR answer sheet (candidate copy) with both side edges visible, and upload it. The app reads your Question Booklet Version Code, Register Number and every answer, then scores it against the answer key for your version.</p>
+  <h3>What is the marking scheme?</h3>
+  <p>1 mark for each correct answer. 0.25 marks are deducted for each wrong answer, for option 5, for a question with no bubble shaded, and for a question with more than one bubble shaded.</p>
+  <h3>Which answer key is used?</h3>
+  <p>The provisional answer keys published by the Karnataka Examinations Authority on 22.11.2026 for Paper I General Knowledge and Paper II Kannada and Science. The final keys and official results announced by KEA are what count.</p>
+  <h3>Is my photo kept private?</h3>
+  <p>Your photo is used only to calculate your score and is seen only by the site administrator. It is never sold or shared. See the <a href="{{ url_for('privacy') }}">privacy policy</a>.</p>
+</section>
+<script>
+  document.getElementById('sheet').addEventListener('change', function () {
+    var f = this.files[0]; if (!f) return;
+    var img = document.createElement('img'); img.src = URL.createObjectURL(f); img.alt = 'Your answer sheet';
+    var p = document.getElementById('pick'); p.innerHTML = ''; p.appendChild(img);
+  });
+</script>
+{% endblock %}

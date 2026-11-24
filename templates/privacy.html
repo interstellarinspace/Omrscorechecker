@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}Privacy policy | {{ cfg.site_name }}{% endblock %}
+{% block meta %}<meta name="description" content="How OMR Score Check handles the photos and details you upload.">
+<link rel="canonical" href="{{ canonical }}">{% endblock %}
+{% block body %}
+<h1>Privacy policy</h1>
+<div class="card">
+<p>OMR Score Check (website and app) checks OMR answer sheets for the {{ cfg.exam_full }}. It is an independent tool, not run by KEA.</p>
+<p><b>What we collect.</b> When you check a sheet, the app sends the photo you choose, the subject you pick and the name you type (optional) to our server. The server reads the sheet, including the register number and booklet serial number shaded on it, and returns your score.</p>
+<p><b>Why.</b> Only to calculate and show your score, and so the exam administrator can review results.</p>
+<p><b>Storage.</b> The photo and the result are stored on our server and seen only by the exam administrator. They are not sold or shared with anyone else, and are not used for advertising.</p>
+<p><b>Camera.</b> The app uses the camera only when you tap to take a photo of your sheet.</p>
+<p><b>Deleting your data.</b> Contact the exam administrator to have your photo and result deleted.</p>
+<p><b>Contact.</b> [Add the administrator's contact email here before publishing.]</p>
+</div>
+{% endblock %}

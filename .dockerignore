@@ -1,0 +1,5 @@
+results/
+tests/
+mobile/
+__pycache__/
+*.pyc

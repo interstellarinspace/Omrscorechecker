@@ -1,0 +1,49 @@
+{
+  "exam_title": "KREIS Teachers Recruitment Exam, 22.11.2026",
+  "num_questions": 100,
+  "options": [
+    "1",
+    "2",
+    "3",
+    "4",
+    "5"
+  ],
+  "not_attempted_option": "5",
+  "set_codes": [
+    "A1",
+    "B1",
+    "C1",
+    "D1"
+  ],
+  "subjects": [
+    {
+      "id": "general_knowledge",
+      "name": "Paper I: General Knowledge",
+      "short": "GK",
+      "slug": "general-knowledge-answer-key"
+    },
+    {
+      "id": "kannada",
+      "name": "Paper II: Kannada",
+      "short": "Kannada",
+      "slug": "kannada-answer-key"
+    },
+    {
+      "id": "science",
+      "name": "Paper II: Science",
+      "short": "Science",
+      "slug": "science-answer-key"
+    }
+  ],
+  "marking_note": "1 for correct; 0.25 deducted for wrong, option 5, no bubble, or more than one bubble",
+  "marking": {
+    "correct": 1,
+    "wrong": -0.25,
+    "skipped": -0.25,
+    "blank": -0.25,
+    "multiple": -0.25
+  },
+  "exam_short": "KREIS 2026",
+  "exam_full": "KREIS Teachers Recruitment Exam (Karnataka Residential Educational Institutions Society), held 22 November 2026",
+  "site_name": "OMR Score Check"
+}

@@ -1,0 +1,8 @@
+{
+  "appId": "com.omrscorecheck.app",
+  "appName": "OMR Score Check",
+  "webDir": "www",
+  "plugins": {
+    "SplashScreen": { "launchShowDuration": 800, "backgroundColor": "#2457d6" }
+  }
+}
