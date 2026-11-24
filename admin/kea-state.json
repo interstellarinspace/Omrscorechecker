@@ -1,12 +1,6 @@
 {
  "request": "2026-11-24T11:07:14.650Z",
  "done": {
-  "PDP26|RAICHUR|General Knowledge Paper (RPC)|232": {
-   "sheets": 290,
-   "published": 240,
-   "failed": 50,
-   "centre": "HAMDARD PU COLLEGE ,BEROON QUILLA, NAWRANGA DARWAZ, TARANATH ROAD"
-  },
   "PDP26|RAICHUR|General Knowledge Paper (RPC)|233": {
    "sheets": 0,
    "note": "no file"
@@ -279,12 +273,6 @@
    "sheets": 0,
    "note": "no file"
   },
-  "PDP26|BENGALURU|General Knowledge Paper (RPC)|166": {
-   "sheets": 334,
-   "published": 308,
-   "failed": 26,
-   "centre": "GOVT ARTS COLLEGE ,DR. B R AMBEDKAR VEEDHI K R CIRCLE CENTRAL COLLEGE METRO STAT"
-  },
   "PDP26|BENGALURU|General Knowledge Paper (RPC)|167": {
    "sheets": 0,
    "note": "no file"
@@ -499,95 +487,19 @@
   }
  },
  "failures": [
-  "RAICHUR centre 232 page 3: version code not read",
-  "RAICHUR centre 232 page 8: version code not read",
-  "RAICHUR centre 232 page 12: version code not read",
-  "RAICHUR centre 232 page 26: version code not read",
-  "RAICHUR centre 232 page 46: version code not read",
-  "RAICHUR centre 232 page 50: version code not read",
-  "RAICHUR centre 232 page 57: version code not read",
-  "RAICHUR centre 232 page 65: version code not read",
-  "RAICHUR centre 232 page 69: version code not read",
-  "RAICHUR centre 232 page 71: version code not read",
-  "RAICHUR centre 232 page 74: version code not read",
-  "RAICHUR centre 232 page 75: version code not read",
-  "RAICHUR centre 232 page 82: version code not read",
-  "RAICHUR centre 232 page 87: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
-  "RAICHUR centre 232 page 98: version code not read",
-  "RAICHUR centre 232 page 112: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
-  "RAICHUR centre 232 page 117: version code not read",
-  "RAICHUR centre 232 page 125: version code not read",
-  "RAICHUR centre 232 page 127: version code not read",
-  "RAICHUR centre 232 page 156: version code not read",
-  "RAICHUR centre 232 page 163: version code not read",
-  "RAICHUR centre 232 page 164: version code not read",
-  "RAICHUR centre 232 page 167: version code not read",
-  "RAICHUR centre 232 page 172: version code not read",
-  "RAICHUR centre 232 page 175: version code not read",
-  "RAICHUR centre 232 page 176: version code not read",
-  "RAICHUR centre 232 page 183: version code not read",
-  "RAICHUR centre 232 page 184: version code not read",
-  "RAICHUR centre 232 page 190: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
-  "RAICHUR centre 232 page 195: version code not read",
-  "RAICHUR centre 232 page 196: version code not read",
-  "RAICHUR centre 232 page 210: version code not read",
-  "RAICHUR centre 232 page 212: version code not read",
-  "RAICHUR centre 232 page 215: version code not read",
-  "RAICHUR centre 232 page 218: version code not read",
-  "RAICHUR centre 232 page 219: version code not read",
-  "RAICHUR centre 232 page 220: version code not read",
-  "RAICHUR centre 232 page 221: version code not read",
-  "RAICHUR centre 232 page 227: version code not read",
-  "RAICHUR centre 232 page 228: version code not read",
-  "RAICHUR centre 232 page 233: version code not read",
-  "RAICHUR centre 232 page 235: version code not read",
-  "RAICHUR centre 232 page 250: version code not read",
-  "RAICHUR centre 232 page 251: version code not read",
-  "RAICHUR centre 232 page 262: version code not read",
-  "RAICHUR centre 232 page 269: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
-  "RAICHUR centre 232 page 281: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
-  "RAICHUR centre 232 page 282: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
-  "RAICHUR centre 232 page 284: version code not read",
-  "RAICHUR centre 232 page 290: Could not find the rows of small blue dashes along both side edges of the sheet.",
-  "Skipped KEA subject 'Compulsory Kannada': no matching subject in Warder.",
-  "BENGALURU centre 166 page 20: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
-  "BENGALURU centre 166 page 24: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
-  "BENGALURU centre 166 page 38: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
-  "BENGALURU centre 166 page 67: version code not read",
-  "BENGALURU centre 166 page 77: register number not read",
-  "BENGALURU centre 166 page 87: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
-  "BENGALURU centre 166 page 100: version code not read",
-  "BENGALURU centre 166 page 104: version code not read",
-  "BENGALURU centre 166 page 108: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
-  "BENGALURU centre 166 page 109: version code not read",
-  "BENGALURU centre 166 page 121: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
-  "BENGALURU centre 166 page 123: version code not read",
-  "BENGALURU centre 166 page 129: version code not read",
-  "BENGALURU centre 166 page 157: version code not read",
-  "BENGALURU centre 166 page 160: version code not read",
-  "BENGALURU centre 166 page 172: version code not read",
-  "BENGALURU centre 166 page 184: version code not read",
-  "BENGALURU centre 166 page 201: version code not read",
-  "BENGALURU centre 166 page 203: version code not read",
-  "BENGALURU centre 166 page 225: version code not read",
-  "BENGALURU centre 166 page 256: version code not read",
-  "BENGALURU centre 166 page 292: version code not read",
-  "BENGALURU centre 166 page 316: version code not read",
-  "BENGALURU centre 166 page 326: Could not line up the answer grid. Make sure the whole sheet is in the photo, fl",
-  "BENGALURU centre 166 page 332: version code not read",
-  "BENGALURU centre 166 page 334: Could not find the rows of small blue dashes along both side edges of the sheet."
+  "Skipped KEA subject 'Compulsory Kannada': no matching subject in Warder."
  ],
  "totals": {
-  "centres": 2,
-  "sheets": 624,
-  "published": 548,
-  "failed": 76
+  "centres": 0,
+  "sheets": 0,
+  "published": 0,
+  "failed": 0
  },
- "status": "done",
- "message": "Finished. 548 sheets published from 2 centres.",
+ "status": "running",
+ "message": "Fetching…",
  "started": "2026-11-24T11:08:06Z",
- "updated": "2026-11-24T11:46:51Z",
- "retry": 1,
+ "updated": "2026-11-24T11:56:51Z",
+ "retry": 5,
  "kea_exam_name": "PRISON DEPARTMENT RECRUITMENT (RPC)-2026 and COMPULSORY KANNADA EXAMINATION -2026 (21/11/2026)",
  "districts": [
   "RAICHUR",
@@ -597,5 +509,6 @@
   "DAVANAGERE",
   "DHARWAD",
   "BALLARI"
- ]
+ ],
+ "reader": "80d287e019"
 }
