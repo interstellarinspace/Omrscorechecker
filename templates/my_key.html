@@ -1,0 +1,25 @@
+{% extends "base.html" %}
+{% set description = "Check your OMR marks with any answer key: upload or type the key, set marks per question, total marks and negative marking, then upload your OMR sheet. Free, and it all runs in your browser." %}
+{% set og_title = "OMR marks calculator with your own answer key" %}
+{% block title %}OMR Marks Calculator with Your Own Answer Key | {{ cfg.site_name }}{% endblock %}
+{% block meta %}{% include "seo_head.html" %}{% endblock %}
+{% block body %}
+<div id="intro">
+<div class="hero hero-own">
+  <h1>Your key, your marks</h1>
+  <p>Add any answer key and your exam's marking scheme, then upload your OMR sheet. Nothing is uploaded: it is all worked out on your phone.</p>
+  <div class="chips"><span>Any answer key</span><span>Negative marking</span><span>Marks per question</span><span>Free</span></div>
+</div>
+</div>
+<div id="forms">
+{% include "_own_form.html" %}
+</div>
+{% include "_result.html" %}
+{% include "_site_js.html" %}
+<script>window.OMR_BUNDLE = "{{ asset('omr-bundle.json') }}";</script>
+<script src="{{ asset('result-view.js') }}"></script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
+<script src="{{ asset('omr-engine.js') }}"></script>
+<script src="{{ asset('pdf-pages.js') }}"></script>
+<script src="{{ asset('own-key.js') }}"></script>
+{% endblock %}

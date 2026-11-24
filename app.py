@@ -243,7 +243,7 @@ def sitemap():
     c = cfg()
     base = SITE_URL or request.url_root.rstrip("/")
     slug = {e["id"]: e["slug"] for e in c.get("exams", [])}
-    paths = (["/", "/results"] + [f"/exams/{e['id']}" for e in c.get("exams", [])]
+    paths = (["/", "/my-key", "/results"] + [f"/exams/{e['id']}" for e in c.get("exams", [])]
              + [f"/{slug.get(s.get('exam'), 'kreis-2026')}/{s['slug']}" for s in c["subjects"] if has_keys(c, s)] + ["/privacy"])
     today = dt.date.today().isoformat()
     urls = "".join(f"<url><loc>{base}{p}</loc><lastmod>{today}</lastmod></url>" for p in paths)
@@ -290,6 +290,11 @@ def mobile_web(path="index.html"):
 @app.route("/health")
 def health():
     return "ok"
+
+
+@app.route("/my-key")
+def my_key():
+    return render_template("my_key.html", cfg=cfg())
 
 
 @app.route("/privacy")

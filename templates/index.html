@@ -32,14 +32,14 @@
 <div class="hero">
   <h1>OMR score calculator</h1>
   <p>Photograph your OMR answer sheet and see your marks in seconds, checked against the provisional answer key, or against any answer key and marking scheme you add yourself. ಕೀ ಉತ್ತರಗಳು ಮತ್ತು ಅಂಕ ಲೆಕ್ಕ.</p>
-  <div class="chips">{% for e in exams %}<span>{{ e.name }}</span>{% endfor %}{% if static_site %}<a href="#mykey" onclick="document.getElementById('mode-own').click();return false" style="color:inherit"><span>Any answer key</span></a>{% endif %}<span>Free</span><span>Score card PDF</span></div>
+  <div class="chips">{% for e in exams %}<span>{{ e.name }}</span>{% endfor %}{% if static_site %}<a href="{{ url_for('my_key') }}" style="color:inherit"><span>Any answer key</span></a>{% endif %}<span>Free</span><span>Score card PDF</span></div>
 </div>
 </div>
 {% if error %}<div class="err">{{ error }}</div>{% endif %}
 <div id="forms">
 {% if static_site %}<div class="mode" role="tablist" aria-label="Which answer key">
   <button type="button" role="tab" id="mode-site" class="on" aria-selected="true">Answer key on this site</button>
-  <button type="button" role="tab" id="mode-own" aria-selected="false">Use my own answer key</button>
+  <a role="tab" id="mode-own" href="{{ url_for('my_key') }}">Use my own answer key</a>
 </div>{% endif %}
 <form class="card" id="scan-form" method="post" enctype="multipart/form-data"{% if not static_site %} onsubmit="document.getElementById('busy').style.display='block';this.querySelector('button').disabled=true"{% endif %}>
   <label>Exam</label>
@@ -64,58 +64,6 @@
   <div id="busy">Reading your sheet…</div>
   {% if static_site %}<p class="muted small" id="engine-note">Your photo is checked inside your browser and is never uploaded. The first check downloads the scanner (about 30 MB), so it takes a little longer.</p>{% endif %}
 </form>
-{% if static_site %}
-<form class="card" id="own-form" hidden novalidate>
-  <h2>Check your marks with any answer key</h2>
-  <p class="muted" style="margin-top:-6px">Add the answer key, set the marking scheme, then add your OMR sheet. Everything is worked out inside your browser; nothing is uploaded.</p>
-  <h3 class="step"><span>1</span>Answer key</h3>
-  <label class="pick small" for="own-keyfile" id="own-keypick"><span class="cam" aria-hidden="true">🗝️</span>Choose a photo or PDF of the answer key</label>
-  <input type="file" id="own-keyfile" accept="image/*,.pdf,application/pdf">
-  <div id="own-keypage-wrap" hidden><label for="own-keypage">Which page has your key?</label><select id="own-keypage"></select></div>
-  <label for="own-key">Or type or paste the key</label>
-  <textarea id="own-key" spellcheck="false" placeholder="One answer per question, for example:&#10;1 3&#10;2 1&#10;3 B&#10;or all in a row: 3 1 2 4 …&#10;or a table with one column per set:&#10;Q A1 B1 C1 D1&#10;1 3 2 4 1"></textarea>
-  <p class="muted small" id="own-keyinfo">Answers can be 1 to 5 or A to E. Write X for a dropped question (everyone gets its marks), and 2/3 when two answers are accepted.</p>
-  <div id="own-set-wrap" hidden><label for="own-set">Your question booklet set</label><select id="own-set"></select></div>
-
-  <h3 class="step"><span>2</span>Marking scheme</h3>
-  <div class="presets" id="own-presets">
-    <button type="button" data-p="kea">KEA (−0.25)</button><button type="button" data-p="third">−1/3 for wrong</button><button type="button" data-p="none">No negative marks</button>
-  </div>
-  <div class="grid2">
-    <div><label for="own-n">Number of questions</label><input type="number" id="own-n" min="1" max="100" value="100" inputmode="numeric"></div>
-    <div><label for="own-correct">Marks for each correct answer</label><input type="number" id="own-correct" step="any" value="1" inputmode="decimal"></div>
-    <div><label for="own-total">Total marks</label><input type="number" id="own-total" step="any" value="100" inputmode="decimal"></div>
-    <div><label for="own-wrong">Marks for a wrong answer</label><input type="number" id="own-wrong" step="any" value="-0.25" inputmode="decimal"></div>
-    <div><label for="own-blank">No bubble shaded</label><input type="number" id="own-blank" step="any" value="-0.25" inputmode="decimal"></div>
-    <div><label for="own-multi">More than one bubble shaded</label><input type="number" id="own-multi" step="any" value="-0.25" inputmode="decimal"></div>
-  </div>
-  <label class="check"><input type="checkbox" id="own-five" checked> Option 5 means "not attempted"</label>
-  <div id="own-skip-wrap"><label for="own-skip">Marks for option 5</label><input type="number" id="own-skip" step="any" value="0" inputmode="decimal"></div>
-  <label class="check"><input type="checkbox" id="own-scale"> Negative marks grow with the question's marks (a 2-mark question loses twice as much)</label>
-  <details id="own-perq-box"><summary>Different marks for some questions</summary>
-    <textarea id="own-perq" spellcheck="false" style="min-height:80px" placeholder="1-50: 1&#10;51-100: 2"></textarea>
-    <p class="muted small">One line per range. Questions not listed get the marks for each correct answer.</p>
-  </details>
-  <p class="note" id="own-summary"></p>
-
-  <h3 class="step"><span>3</span>Your answers</h3>
-  <div class="presets" id="own-how"><button type="button" data-h="sheet" class="on">Upload my OMR sheet</button><button type="button" data-h="type">Type my answers</button></div>
-  <div id="own-sheet-wrap">
-    <label class="pick" for="own-sheet" id="own-pick"><span class="cam" aria-hidden="true">📷</span>Tap to take a photo, or choose a photo or the OMR PDF from KEA</label>
-    <input type="file" id="own-sheet" accept="image/*,.pdf,application/pdf">
-    <p class="muted small">Photo reading works for the KEA OMR sheet (up to 100 questions, options 1 to 5). For any other sheet, type your answers.</p>
-  </div>
-  <div id="own-type-wrap" hidden>
-    <label for="own-answers">Your answers</label>
-    <textarea id="own-answers" spellcheck="false" placeholder="One per question, in order: 3 1 2 0 4 …&#10;0 = left blank, * = more than one shaded"></textarea>
-  </div>
-  <label for="own-name">Your name</label>
-  <input type="text" id="own-name" autocomplete="name" placeholder="Optional">
-  <p></p>
-  <button class="btn" type="submit">Calculate my marks</button>
-  <div id="own-busy" class="busy" hidden>Working…</div>
-</form>
-{% endif %}
 </div>
 {% if static_site %}{% include "_result.html" %}{% endif %}
 {% if play_url or appstore_url %}
@@ -147,7 +95,8 @@
 <script src="{{ asset('omr-engine.js') }}"></script>
 <script src="{{ asset('pdf-pages.js') }}"></script>
 <script src="{{ asset('browser-scan.js') }}"></script>
-<script src="{{ asset('own-key.js') }}"></script>{% endif %}
+{% endif %}
+<script>if (location.hash === "#mykey") location.replace("{{ url_for('my_key') }}");</script>
 <script>window.OMR_EXAMS = {{ exams_for_form|tojson }};</script>
 <script src="{{ asset('exam-picker.js') }}"></script>
 <script>

@@ -8,17 +8,8 @@
   if (!form) return;
   var E = window.OMREngine, parsed = null, keyPages = [], how = "sheet", STORE = "omr-own-v1";
 
-  // ---------- switching between the site's keys and the student's own ----------
-  function mode(own) {
-    $("mode-own").classList.toggle("on", own); $("mode-site").classList.toggle("on", !own);
-    $("mode-own").setAttribute("aria-selected", own); $("mode-site").setAttribute("aria-selected", !own);
-    form.hidden = !own; $("scan-form").hidden = own;
-    var err = document.querySelector(".err.form-err"); if (err) err.hidden = true;
-    if (own) E.load().catch(function () {});
-    try { history.replaceState(history.state, "", own ? "#mykey" : location.pathname + location.search); } catch (e) { /* ignore */ }
-  }
-  $("mode-own").addEventListener("click", function () { mode(true); });
-  $("mode-site").addEventListener("click", function () { mode(false); });
+  // The page loads the calculator straight away, so it is ready when the student is.
+  E.load().catch(function () {});
 
   function error(msg) {
     var e = form.parentNode.querySelector(".err.form-err");
@@ -222,5 +213,5 @@
     }
   } catch (e) { /* ignore */ }
   summary();
-  if (location.hash === "#mykey") { mode(true); if ($("own-key").value.trim()) parseKey().catch(console.error); }
+  if ($("own-key").value.trim()) parseKey().catch(console.error);
 })();
