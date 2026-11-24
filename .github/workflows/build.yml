@@ -76,6 +76,7 @@ jobs:
         run: echo "window.OMR_API_BASE = \"${{ vars.OMR_API_BASE }}\";" > www/config.js
       - run: npx cap sync ios
       - name: Build for the iPhone simulator (checks the iOS app compiles)
+        shell: bash   # bash with pipefail, so a failed build is not hidden by "tail"
         run: |
           xcodebuild -project ios/App/App.xcodeproj -scheme App -configuration Debug \
             -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
