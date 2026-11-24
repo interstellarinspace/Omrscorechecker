@@ -1,8 +1,10 @@
 {
- "id": "2026-11-24T09:49:03.000Z",
+ "id": "2026-11-24T10:28:14.473Z",
  "url": "https://kearesults.karnataka.gov.in/keaomrs/kries.aspx",
- "exam": "kreis",
- "kea_exam": "KREISREC26",
- "districts": [],
+ "exam": "warder",
+ "kea_exam": "PDP26",
+ "districts": [
+  "BENGALURU"
+ ],
  "stop": false
 }
