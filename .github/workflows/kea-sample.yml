@@ -1,0 +1,32 @@
+name: KEA sample for scanner debugging
+
+# Manual only. Downloads one centre PDF from KEA, encrypted to the given public key, as a
+# 1-day artifact. Nothing is committed.
+on:
+  workflow_dispatch:
+    inputs:
+      exam: {description: "KEA exam code", required: true, default: "PDP26"}
+      district: {description: "District", required: true, default: "RAICHUR"}
+      centre: {description: "Centre code", required: true}
+      subject: {description: "Part of the KEA subject name", required: false, default: ""}
+      pubkey: {description: "base64 DER public key", required: true}
+
+permissions:
+  contents: read
+
+jobs:
+  sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install requests cryptography
+      - run: python tools/kea_sample.py --exam "${{ inputs.exam }}" --district "${{ inputs.district }}" --centre "${{ inputs.centre }}" --subject "${{ inputs.subject }}" --pubkey "${{ inputs.pubkey }}"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: kea-sample
+          path: sample.bin
+          retention-days: 1
