@@ -33,6 +33,8 @@ UPLOAD_DIR = os.path.join(RESULTS_DIR, "uploads")
 SITE_URL = os.environ.get("SITE_URL", "").rstrip("/")   # e.g. https://omrscorecheck.in, used for SEO links
 PLAY_URL = os.environ.get("PLAY_STORE_URL", "")
 APPSTORE_URL = os.environ.get("APP_STORE_URL", "")
+# Set by build_site.py: render pages for GitHub Pages, where the scanner runs in the browser.
+STATIC_SITE = os.environ.get("STATIC_SITE") == "1"
 
 
 def cfg():
@@ -43,7 +45,7 @@ def cfg():
 def inject():
     base = SITE_URL or request.url_root.rstrip("/")
     return {"cfg": cfg(), "site_url": base, "play_url": PLAY_URL, "appstore_url": APPSTORE_URL,
-            "canonical": base + request.path}
+            "canonical": base + request.path, "static_site": STATIC_SITE}
 
 
 def subject_name(c, sid):

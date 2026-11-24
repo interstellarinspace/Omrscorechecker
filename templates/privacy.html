@@ -6,6 +6,8 @@
 <h1>Privacy policy</h1>
 <div class="card">
 <p>OMR Score Check (website and app) checks OMR answer sheets for the {{ cfg.exam_full }}. It is an independent tool, not run by KEA.</p>
+{% if static_site %}<p><b>On this website your photo never leaves your device.</b> The answer sheet is read and scored inside your own browser. Nothing you choose or type is uploaded or stored by us. The scanner code is downloaded from this site and from the jsDelivr CDN.</p>
+<p><b>In the phone app</b>, the points below apply.</p>{% endif %}
 <p><b>What we collect.</b> When you check a sheet, the app sends the photo you choose, the subject you pick and the name you type (optional) to our server. The server reads the sheet, including the register number and booklet serial number shaded on it, and returns your score.</p>
 <p><b>Why.</b> Only to calculate and show your score, and so the exam administrator can review results.</p>
 <p><b>Storage.</b> The photo and the result are stored on our server and seen only by the exam administrator. They are not sold or shared with anyone else, and are not used for advertising.</p>

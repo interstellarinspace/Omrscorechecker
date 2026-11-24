@@ -20,7 +20,7 @@
       {"@type": "Question", "name": "Which answer key is used?",
        "acceptedAnswer": {"@type": "Answer", "text": "The provisional answer keys published by the Karnataka Examinations Authority on 22.11.2026 for Paper I General Knowledge and Paper II Kannada and Science, versions A1, B1, C1 and D1."}},
       {"@type": "Question", "name": "Is my photo kept private?",
-       "acceptedAnswer": {"@type": "Answer", "text": "Your photo is used only to calculate your score and is seen only by the site administrator. It is never sold or shared."}}
+       "acceptedAnswer": {"@type": "Answer", "text": "{% if static_site %}On this site your photo is checked inside your own browser and is never uploaded anywhere.{% else %}Your photo is used only to calculate your score and is seen only by the site administrator. It is never sold or shared.{% endif %}"}}
     ]}
   ]
 }|tojson }}
@@ -30,7 +30,7 @@
 <h1>{{ cfg.exam_short }} OMR score calculator</h1>
 <p class="lead">Photograph your OMR answer sheet and see your marks in seconds, checked against the provisional answer key. KREIS ಕೀ ಉತ್ತರಗಳು 2026.</p>
 {% if error %}<div class="err">{{ error }}</div>{% endif %}
-<form class="card" method="post" enctype="multipart/form-data" onsubmit="document.getElementById('busy').style.display='block';this.querySelector('button').disabled=true">
+<form class="card" id="scan-form" method="post" enctype="multipart/form-data"{% if not static_site %} onsubmit="document.getElementById('busy').style.display='block';this.querySelector('button').disabled=true"{% endif %}>
   <label for="subject">Subject</label>
   <select id="subject" name="subject" required>
     <option value="" disabled {% if not subject %}selected{% endif %}>Choose your paper</option>
@@ -49,7 +49,27 @@
   <p></p>
   <button class="btn" type="submit">Check my answers</button>
   <div id="busy">Reading your sheet…</div>
+  {% if static_site %}<p class="muted small" id="engine-note">Your photo is checked inside your browser and is never uploaded. The first check downloads the scanner (about 30 MB), so it takes a little longer.</p>{% endif %}
 </form>
+{% if static_site %}
+<div id="result" hidden>
+  <div class="card">
+    <p class="muted" id="res-meta" style="margin:0"></p>
+    <div id="res-error" class="err" hidden></div>
+    <div class="score" id="res-score"></div>
+    <div class="stats five" id="res-stats"></div>
+    <p class="muted" id="res-marking"></p>
+  </div>
+  <div class="card">
+    <h2>How your sheet was read</h2>
+    <p class="muted">Green ring: correct. Red ring: wrong, with the right answer ringed thinly in green. Orange: more than one bubble shaded. Blue: option 5 (not attempted), and the version, register and booklet numbers. If anything looks wrong, retake the photo.</p>
+    <img class="sheet" id="res-image" alt="Your sheet with answers marked">
+  </div>
+  <div class="card scroll"><h2>Question by question</h2><table id="res-table"></table></div>
+  <button type="button" class="btn secondary" id="again">Check another sheet</button>
+  <p></p>
+</div>
+{% endif %}
 {% if play_url or appstore_url %}
 <div class="card"><h2>Get the app</h2><div class="stores">
   {% if play_url %}<a class="btn" href="{{ play_url }}" rel="noopener">Google Play</a>{% endif %}
@@ -70,8 +90,11 @@
   <h3>Which answer key is used?</h3>
   <p>The provisional answer keys published by the Karnataka Examinations Authority on 22.11.2026 for Paper I General Knowledge and Paper II Kannada and Science. The final keys and official results announced by KEA are what count.</p>
   <h3>Is my photo kept private?</h3>
-  <p>Your photo is used only to calculate your score and is seen only by the site administrator. It is never sold or shared. See the <a href="{{ url_for('privacy') }}">privacy policy</a>.</p>
+  <p>{% if static_site %}On this site your photo is checked inside your own browser and is never uploaded anywhere.{% else %}Your photo is used only to calculate your score and is seen only by the site administrator. It is never sold or shared.{% endif %} See the <a href="{{ url_for('privacy') }}">privacy policy</a>.</p>
 </section>
+{% if static_site %}<script>window.OMR_BUNDLE = "{{ url_for('static', filename='omr-bundle.json') }}";</script>
+<script src="https://cdn.jsdelivr.net/pyodide/v0.28.3/full/pyodide.js"></script>
+<script src="{{ url_for('static', filename='browser-scan.js') }}"></script>{% endif %}
 <script>
   document.getElementById('sheet').addEventListener('change', function () {
     var f = this.files[0]; if (!f) return;

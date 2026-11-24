@@ -92,3 +92,13 @@ the iOS app compiles. The same screens also work in a browser at `/app/`.
 Pages: `/` (score checker + FAQ), `/kreis-2026/<subject>-answer-key`,
 `/privacy`, plus `sitemap.xml` and `robots.txt`. Set `SITE_URL` to your domain,
 and `PLAY_STORE_URL` / `APP_STORE_URL` once the apps are live.
+
+## Website on GitHub Pages (no server)
+
+`build_site.py` renders the same pages as static files into `_site/`, and the
+scanner runs in the visitor's browser with Pyodide (Python + OpenCV compiled
+for the web), so photos never leave the phone. `.github/workflows/pages.yml`
+publishes it on every push to `main` once Settings > Pages > Source is set to
+"GitHub Actions". The site is then at
+`https://<user>.github.io/<repo>/`. Results are not collected centrally on
+this version; use the hosted server (`app.py`) if you need the admin page.
