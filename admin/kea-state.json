@@ -1,15 +1,31 @@
 {
  "request": "2026-11-24T10:28:14.473Z",
- "done": {},
- "failures": [],
+ "done": {
+  "PDP26|BENGALURU|General Knowledge Paper (RPC)|101": {
+   "sheets": 192,
+   "published": 189,
+   "failed": 3,
+   "centre": "LAL BAHADUR SHASTRI GOVT FIRST GRADE COLLEGE ,DINNUR ROAD RT NAGAR, NEAR PUSHPAN"
+  }
+ },
+ "failures": [
+  "Skipped KEA subject 'Compulsory Kannada': no matching subject in Warder.",
+  "BENGALURU centre 101 page 101: version code not read",
+  "BENGALURU centre 101 page 117: version code not read",
+  "BENGALURU centre 101 page 192: Could not find the rows of small blue dashes along both side edges of the sheet."
+ ],
  "totals": {
-  "centres": 0,
-  "sheets": 0,
-  "published": 0,
-  "failed": 0
+  "centres": 1,
+  "sheets": 192,
+  "published": 189,
+  "failed": 3
  },
  "status": "running",
- "message": "Fetching…",
+ "message": "Working on BENGALURU, General Knowledge Paper (RPC), centre 101.",
  "started": "2026-11-24T10:29:36Z",
- "updated": "2026-11-24T10:29:36Z"
+ "updated": "2026-11-24T10:32:26Z",
+ "kea_exam_name": "PRISON DEPARTMENT RECRUITMENT (RPC)-2026 and COMPULSORY KANNADA EXAMINATION -2026 (21/11/2026)",
+ "districts": [
+  "BENGALURU"
+ ]
 }
