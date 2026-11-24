@@ -928,6 +928,24 @@
     finally { btn.disabled = false; }
   });
 
+  // ---------- stale page check ----------
+  // Browsers may keep an old copy of this page for a while after an update. If the live page
+  // links a newer manage.js than the one running, say so and offer to reload.
+  (function () {
+    var me = Array.prototype.filter.call(document.scripts, function (sc) { return /manage\.js/.test(sc.src); })[0];
+    if (!me) return;
+    var mine = (me.src.match(/[?&]v=(\w+)/) || [])[1];
+    fetch(location.href.split("#")[0], { cache: "no-store" }).then(function (r) { return r.text(); }).then(function (html) {
+      var live = (html.match(/manage\.js\?v=(\w+)/) || [])[1];
+      if (!mine || !live || mine === live) return;
+      var bar = document.createElement("div");
+      bar.className = "note"; bar.style.cssText = "position:sticky;top:0;z-index:50;margin:0 0 12px;font-weight:700";
+      bar.innerHTML = 'A newer version of this admin page is available. <button type="button" class="btn" style="width:auto;padding:6px 14px;margin-left:8px">Reload now</button>';
+      bar.querySelector("button").addEventListener("click", function () { location.reload(); });
+      var main = document.querySelector("main") || document.body; main.insertBefore(bar, main.firstChild);
+    }).catch(function () {});
+  })();
+
   // ---------- start ----------
   $("gh-connect").addEventListener("click", connect);
   $("gh-forget").addEventListener("click", function () {
