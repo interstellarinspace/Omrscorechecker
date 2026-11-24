@@ -3,6 +3,9 @@
 {% block meta %}<meta name="robots" content="noindex, nofollow, noarchive"><meta name="referrer" content="no-referrer">{% endblock %}
 {% block body %}
 <style>
+  .keypage { border:1px solid var(--line, #ddd); border-radius:10px; padding:10px; margin:10px 0; }
+  .keyhead { height:120px; overflow:hidden; border-radius:6px; background:#fff; }
+  .keyhead img { width:100%; display:block; }
   .tabbar { display:flex; gap:8px; margin-bottom:16px; overflow-x:auto; }
   .tabbar button { flex:none; border:1.5px solid var(--accent); background:#fff; color:var(--accent); font-weight:700; padding:9px 14px; border-radius:999px; cursor:pointer; font-size:.95rem; }
   .tabbar button.on { background:var(--grad); color:#fff; border-color:transparent; }
@@ -81,7 +84,8 @@
     <label>Upload the key file <span class="muted">(optional)</span></label>
     <label class="pick" for="key-file" id="key-pick"><span class="cam" aria-hidden="true">📄</span>Choose the answer key: PDF, Excel (.xlsx, .xls) or CSV</label>
     <input type="file" id="key-file" accept=".pdf,.xlsx,.xls,.csv,.txt,application/pdf">
-    <p class="muted">The answers are read into the box below. Check them, press Check to see a preview, then Save. Photos of a key cannot be read; type those in.</p>
+    <p class="muted">The answers are read straight away, including scanned key PDFs from KEA, and shown in a preview. Check them, then press Save. If the PDF has keys for several subjects, choose the subject for each page and press Save all keys.</p>
+    <div id="key-pages" hidden></div>
     <div id="key-preview" class="scroll"></div>
     <label for="key-text">Answers</label>
     <textarea id="key-text" rows="10" placeholder="Q  A1  B1  C1  D1

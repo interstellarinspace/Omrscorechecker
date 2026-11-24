@@ -67,6 +67,14 @@
     "    except ValueError as e:",
     "        return json.dumps({'error': str(e)})",
     "    return json.dumps({'key': {str(q): a for q, a in k.items()}})",
+    "def omr_read_key_page(data, subject=''):",
+    "    from omr import keyread as KR",
+    "    c = K.subject_config(K.load_config(), subject) if subject else K.load_config()",
+    "    try:",
+    "        r = KR.read_key_page(bytes(data), len(c['set_codes']))",
+    "    except KR.KeyReadError as e:",
+    "        return json.dumps({'error': str(e)})",
+    "    return json.dumps({'text': KR.key_text(r['rows'], c['set_codes']), 'unsure': r['unsure'], 'rows': len(r['rows'])})",
     "def omr_key_text(js):",
     "    return K.key_to_text({int(q): a for q, a in json.loads(js).items()}) + '\\n'"
   ].join("\n");

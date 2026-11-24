@@ -705,23 +705,99 @@
     wb.SheetNames.forEach(function (n) { rows = rows.concat(window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: false })); });
     return rows;
   }
+  // Scanned key PDFs (like KEA's) are pictures: each page is read by the scanner, which finds
+  // the Q No / A1 B1 C1 D1 table and reads the printed digits. A PDF can hold keys for several subjects.
+  var keyPages = [];
+  async function readKeyPdf(f, sid) {
+    var pages = await OMRPdf.pages(f), found = [];
+    for (var i = 0; i < pages.length; i++) {
+      msg("key-msg", "Reading page " + (i + 1) + " of " + pages.length + (OMREngine.isLoaded() ? "…" : " (loading the reader, first time only)…"));
+      var blob = await pages[i].blob(), r = await OMREngine.call("omr_read_key_page", new Uint8Array(await blob.arrayBuffer()), sid);
+      if (!r.error && r.rows >= 10) found.push({ page: i + 1, text: r.text, unsure: r.unsure, rows: r.rows, img: URL.createObjectURL(blob) });
+    }
+    return found;
+  }
+  function subjectSelect(id, value) {
+    return '<select id="' + id + '"><option value="">Don\'t save this page</option>' + subjectOptions(null).replace('value="' + value + '"', 'value="' + value + '" selected') + "</select>";
+  }
+  function showKeyPages() {
+    var box = $("key-pages");
+    if (keyPages.length < 2) { box.innerHTML = ""; box.hidden = true; return; }
+    box.hidden = false;
+    box.innerHTML = "<h3>This PDF has " + keyPages.length + " answer keys</h3><p class='muted'>Choose the subject for each page (the page heading is shown), then press Save all keys.</p>" +
+      keyPages.map(function (k, i) {
+        return '<div class="keypage"><div class="keyhead"><img alt="Heading of page ' + k.page + '" src="' + k.img + '"></div>' +
+          "<p><b>Page " + k.page + "</b>: " + k.rows + " questions read" + (k.unsure.length ? ", <span class='bad'>check questions " + k.unsure.join(", ") + "</span>" : ", all clear") + "</p>" +
+          subjectSelect("kp-subj-" + i, k.subject || "") + ' <button type="button" class="linkbtn" data-kp-edit="' + i + '">Show / edit this key</button></div>';
+      }).join("") + '<p></p><button class="btn" type="button" id="kp-save">Save all keys</button>';
+  }
+  $("key-pages").addEventListener("change", function (ev) {
+    var m = ev.target.id && ev.target.id.match(/^kp-subj-(\d+)$/); if (m) keyPages[+m[1]].subject = ev.target.value;
+  });
+  $("key-pages").addEventListener("click", async function (ev) {
+    var e = ev.target.closest("[data-kp-edit]");
+    if (e) {
+      var k = keyPages[+e.dataset.kpEdit]; if (!k.subject) { msg("key-msg", "Choose the subject for page " + k.page + " first.", "bad"); return; }
+      $("key-subject").value = k.subject; renderKeySets(); $("key-text").value = k.text;
+      try { var p = await prepareKeys(); showKeyPreview(p); msg("key-msg", "Page " + k.page + " is in the box below. Press Save to save just this one, or Save all keys above.", "ok"); }
+      catch (err) { msg("key-msg", err.message, "bad"); }
+      $("key-text").scrollIntoView({ behavior: "smooth", block: "center" });
+      return;
+    }
+    if (ev.target.id !== "kp-save") return;
+    var btn = ev.target; btn.disabled = true;
+    try {
+      var files = {}, names = [], used = {};
+      for (var i = 0; i < keyPages.length; i++) {
+        var kp = keyPages[i]; if (!kp.subject) continue;
+        if (used[kp.subject]) throw new Error("Two pages are set to the same subject (" + subjOf(kp.subject).name + ").");
+        used[kp.subject] = true;
+        var t = await OMREngine.call("omr_parse_table", kp.text, kp.subject);
+        if (t.error) throw new Error("Page " + kp.page + ": " + t.error + ". Use Show / edit this key to fix it.");
+        for (var set in t.keys) if (Object.keys(t.keys[set]).length) {
+          var merged = Object.assign({}, (S.keys[kp.subject] || {})[set] || {}, t.keys[set]);
+          files["keys/" + kp.subject + "/" + set + ".txt"] = await OMREngine.keyText(merged);
+          (S.keys[kp.subject] = S.keys[kp.subject] || {})[set] = merged;
+        }
+        names.push(subjOf(kp.subject).name);
+      }
+      if (!names.length) throw new Error("Choose a subject for at least one page.");
+      msg("key-msg", "Saving…");
+      await commit(files, "Update answer keys from PDF: " + names.join(", "));
+      await OMREngine.setFiles(files); renderAll();
+      msg("key-msg", "Saved the keys for " + names.join(", ") + ". The website shows them, and candidates can check their scores, in about 2 minutes.", "ok");
+      keyPages = []; showKeyPages(); $("key-preview").innerHTML = "";
+    } catch (err) { console.error(err); msg("key-msg", err.message, "bad"); }
+    finally { btn.disabled = false; }
+  });
   $("key-file").addEventListener("change", async function () {
     var f = this.files[0]; if (!f) return;
     var sid = $("key-subject").value, nsets = sc(sid).set_codes.length;
     $("key-pick").innerHTML = '<span class="cam" aria-hidden="true">📄</span>' + esc(f.name);
-    msg("key-msg", "Reading " + f.name + "…");
+    msg("key-msg", "Reading " + f.name + "…"); keyPages = []; showKeyPages(); $("key-preview").innerHTML = "";
     try {
-      var buf = new Uint8Array(await f.arrayBuffer()), name = f.name.toLowerCase(), rows;
-      if (/\.pdf$/.test(name) || f.type === "application/pdf") rows = await pdfRows(buf);
+      var buf = new Uint8Array(await f.arrayBuffer()), name = f.name.toLowerCase(), rows = null, text = "", note = "";
+      if (OMRPdf.isPdf(f)) {
+        keyPages = await readKeyPdf(f, sid);
+        if (keyPages.length > 1) {
+          keyPages[0].subject = sid;
+          showKeyPages();
+          msg("key-msg", "Read " + keyPages.length + " answer keys from " + f.name + ". Choose the subject for each page, then press Save all keys.", "ok");
+          return;
+        }
+        if (keyPages.length === 1) { text = keyPages[0].text; if (keyPages[0].unsure.length) note = " Questions " + keyPages[0].unsure.join(", ") + " could not be read clearly and show ?: type the right answer in the box."; keyPages = []; }
+        else rows = await pdfRows(buf);   // a PDF with real text in it
+      }
       else if (/\.(xlsx|xls|csv)$/.test(name)) rows = await sheetRows(buf);
       else rows = new TextDecoder().decode(buf).split(/\r?\n/).map(function (l) { return l.split(/[\s,;\t]+/); });
-      var text = rowsToKeyText(rows, nsets);
-      if (!text) throw new Error("No answer rows were found in this file. If it is a scanned picture, type the answers in instead.");
+      if (rows) text = rowsToKeyText(rows, nsets);
+      if (!text) throw new Error("No answer table was found in this file. Check it is the answer key, or type the answers in.");
       document.querySelector("input[name=key-mode][value=table]").checked = true; $("key-set-wrap").hidden = true; renderKeySets();
       $("key-text").value = text;
-      var p = await prepareKeys();
-      showKeyPreview(p);
-      msg("key-msg", "Read from " + f.name + ": " + describe(p) + ". Check the preview against the key, correct the box if needed, then press Save.", "ok");
+      try {
+        var p = await prepareKeys(); showKeyPreview(p);
+        msg("key-msg", "Read from " + f.name + ": " + describe(p) + ". Check the preview, then press Save." + note, "ok");
+      } catch (e) { msg("key-msg", e.message + "." + note, "bad"); }
     } catch (e) { console.error(e); msg("key-msg", e.message || "Could not read this file.", "bad"); $("key-preview").innerHTML = ""; }
     finally { this.value = ""; }
   });
