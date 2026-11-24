@@ -19,7 +19,7 @@
   <div id="subject-wrap"><label for="subject-pick">Subject</label><select id="subject-pick"></select></div>
   <input type="hidden" id="subject" value="">
   <label for="reg">Register number</label>
-  <input type="text" id="reg" inputmode="numeric" placeholder="9 digits, e.g. 338401003" required>
+  <input type="text" id="reg" inputmode="numeric" required>
   {% if by_booklet %}<label for="booklet">Question booklet number</label>
   <input type="text" id="booklet" inputmode="numeric" placeholder="6 digits, as shaded on your OMR sheet" required>
   <p class="muted">Both numbers are on your OMR sheet (candidate copy). Use the numbers as you shaded them in the bubbles. We ask for both so that nobody else can look up your marks.</p>{% else %}

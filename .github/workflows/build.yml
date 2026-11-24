@@ -17,6 +17,7 @@ jobs:
           python-version: "3.12"
       - run: pip install -r requirements.txt
       - run: python tests/test_real_sheets.py
+      - run: pip install requests pymupdf cryptography && python -W ignore tests/test_kea_fetch.py
 
   android:
     runs-on: ubuntu-latest

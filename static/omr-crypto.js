@@ -67,7 +67,26 @@
     var bytes = await openBytes(await sheetKey(rawB64), new Uint8Array(await res.arrayBuffer()));
     return URL.createObjectURL(new Blob([bytes], { type: "image/jpeg" }));
   }
+
+  // ---- admin key pair: lets the GitHub fetch job add entries to the admin's list without the passphrase ----
+  var OAEP = { name: "RSA-OAEP", hash: "SHA-256" };
+  async function newAdminKeys(vault) {
+    var kp = await crypto.subtle.generateKey({ name: "RSA-OAEP", modulusLength: 2048, publicExponent: new Uint8Array([1, 0, 1]), hash: "SHA-256" }, true, ["encrypt", "decrypt"]);
+    var pub = new Uint8Array(await crypto.subtle.exportKey("spki", kp.publicKey));
+    var priv = new Uint8Array(await crypto.subtle.exportKey("pkcs8", kp.privateKey));
+    return { pub: b64(pub), priv: b64(await sealBytes(vault, priv)) };
+  }
+  async function adminPrivate(vault, privB64) {
+    return crypto.subtle.importKey("pkcs8", await openBytes(vault, unb64(privB64)), OAEP, false, ["decrypt"]);
+  }
+  async function openForAdmin(priv, text) {
+    var f = JSON.parse(text);
+    var raw = await crypto.subtle.decrypt(OAEP, priv, unb64(f.k));
+    var key = await crypto.subtle.importKey("raw", raw, "AES-GCM", false, ["decrypt"]);
+    return JSON.parse(new TextDecoder().decode(await openBytes(key, unb64(f.data))));
+  }
   window.OMRCrypto = { derive: derive, seal: seal, open: open, digits: digits, b64: b64, unb64: unb64,
     newSheetKey: newSheetKey, sheetKey: sheetKey, openSheet: openSheet,
-    sealBytes: sealBytes, openBytes: openBytes, newVault: newVault, unlockVault: unlockVault };
+    sealBytes: sealBytes, openBytes: openBytes, newVault: newVault, unlockVault: unlockVault,
+    newAdminKeys: newAdminKeys, adminPrivate: adminPrivate, openForAdmin: openForAdmin };
 })();

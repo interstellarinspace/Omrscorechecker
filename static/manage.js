@@ -96,8 +96,10 @@
         if (!S.vault) throw new Error("Wrong admin passphrase.");
       }
       $("vault-pass").value = ""; $("vault-pass2").value = "";
+      await ensureAdminKeys();
       await loadData();
       await loadIndex();
+      await mergeInbox();
       showSearch("");
       store("omr-gh-repo", S.repo); store("omr-gh-token", S.token);
       msg("gh-status", "Connected to " + info.full_name + ".", "ok");
@@ -108,6 +110,43 @@
       msg("gh-status", e.status === 401 ? "GitHub did not accept this token. Check it was copied in full and has not expired." :
         e.status === 404 ? "Repository not found, or the token has no access to it." : (e.message || "Could not connect."), "bad");
     } finally { $("gh-connect").disabled = false; }
+  }
+
+  // The KEA fetch job (GitHub Actions) has no passphrase. It encrypts the entries it adds to
+  // admin/inbox/ with the admin's public key; they are merged into the admin's list here.
+  async function ensureAdminKeys() {
+    var v = JSON.parse(utf8b64decode((await gh("/git/blobs/" + S.tree[VAULT])).content));
+    if (!v.pub || !v.priv) {
+      var k = await OMRCrypto.newAdminKeys(S.vault); v.pub = k.pub; v.priv = k.priv;
+      await commit({ "admin/vault.json": JSON.stringify(v) }, "Set up the admin key for automatic KEA fetches");
+      await loadTree();
+    }
+    S.priv = await OMRCrypto.adminPrivate(S.vault, v.priv);
+  }
+  async function mergeInbox() {
+    var paths = Object.keys(S.tree).filter(function (p) { return /^admin\/inbox\/[\w.-]+\.bin$/.test(p); }).sort();
+    if (!paths.length || !S.priv) return 0;
+    await loadIndex();
+    var byRegister = (S.cfg.results_lookup || "register_booklet") === "register", files = {}, added = 0;
+    for (var i = 0; i < paths.length; i++) {
+      var data;
+      try { data = await OMRCrypto.openForAdmin(S.priv, new TextDecoder().decode(await getBlob(S.tree[paths[i]]))); }
+      catch (e) { console.error("inbox", paths[i], e); continue; }   // made for another key: leave it
+      (data.entries || []).forEach(function (n) {
+        S.index = S.index.filter(function (e) {
+          var same = e.reg === n.reg && e.subject === n.subject && (byRegister || e.booklet === n.booklet);
+          if (same && e.sheet && e.sheet !== n.sheet && S.tree[e.sheet]) files[e.sheet] = null;
+          return !same;
+        });
+        S.index.push(n); added++;
+      });
+      files[paths[i]] = null;
+    }
+    if (!Object.keys(files).length) return 0;
+    files[INDEX] = await putBlob(await OMRCrypto.sealBytes(S.vault, new TextEncoder().encode(JSON.stringify(S.index))));
+    await commit(files, "Add " + added + " sheet" + (added === 1 ? "" : "s") + " fetched from KEA to the admin list");
+    await loadTree();
+    return added;
   }
 
   async function loadData() {
@@ -147,12 +186,12 @@
   }
   function renderAll() {
     var c = S.cfg;
-    [["key-subject", null], ["one-subject", null], ["bulk-subject", function (e) { return e.omr_layout === "kea_kreis"; }]].forEach(function (x) {
+    [["key-subject", null], ["one-subject", null], ["bulk-subject", null]].forEach(function (x) {
       var sel = $(x[0]), v = sel.value;
       sel.innerHTML = subjectOptions(x[1]);
       if (v && sel.querySelector('option[value="' + v + '"]')) sel.value = v;
     });
-    renderKeySets(); renderOne();
+    renderKeySets(); renderOne(); renderBulkLayout();
     $("keys-status").innerHTML = (c.exams || []).map(function (e) {
       var subs = c.subjects.filter(function (s) { return s.exam === e.id; }); if (!subs.length) return "";
       var codes = sc(subs[0].id).set_codes, n = sc(subs[0].id).num_questions;
@@ -162,15 +201,24 @@
             return '<td class="' + (k >= n ? "ok" : k ? "warn" : "bad") + '">' + (k || "–") + "</td>"; }).join("") + "</tr>";
         }).join("");
     }).join("");
+    ["kea-exam", "merit-exam"].forEach(function (id) {
+      var sel = $(id), v = sel.value;
+      sel.innerHTML = (c.exams || []).map(function (e) { return '<option value="' + esc(e.id) + '">' + esc(e.short || e.name) + "</option>"; }).join("");
+      if (v && sel.querySelector('option[value="' + v + '"]')) sel.value = v;
+    });
+    renderMeritSubjects();
     $("new-exam").innerHTML = (c.exams || []).map(function (e) { return '<option value="' + esc(e.id) + '">' + esc(e.short || e.name) + "</option>"; }).join("");
     $("subj-list").innerHTML = (c.exams || []).map(function (e) {
       var subs = c.subjects.filter(function (s) { return s.exam === e.id; });
       return '<div class="exam-block"><h3>' + esc(e.name) + ' <span class="muted" style="font-weight:500">' + esc(e.full || "") + "</span></h3>" +
-        '<p class="muted" style="margin:0 0 6px">' + (e.omr_layout === "kea_kreis" ? "OMR photo checking: on" : "OMR photo checking: coming soon (needs a sample sheet)") + "</p>" +
+        '<p class="muted" style="margin:0 0 6px">' + (e.omr_layout === "kea_kreis" ? "OMR photo checking: on" : "OMR photo checking: off. " +
+          '<button type="button" class="linkbtn" data-layout="' + esc(e.id) + '">Turn on (sheet is the same KEA OMR sheet as KREIS)</button>') + "</p>" +
         (subs.map(function (s) {
           var has = keyCount(s.id).some(function (k) { return k > 0; });
-          return '<div class="subj-line"><span>' + esc(s.name) + " " + (has ? '<span class="badge ready">key added</span>' : '<span class="badge soon">no key yet</span>') + "</span>" +
-            (has ? "" : '<button type="button" class="linkbtn" data-remove="' + esc(s.id) + '">Remove</button>') + "</div>";
+          var counts = keyCount(s.id), codes = sc(s.id).set_codes, full = counts.filter(function (k) { return k >= sc(s.id).num_questions; }).length;
+          return '<div class="subj-line"><span>' + esc(s.name) + " " + (has ? '<span class="badge ready">key: ' + full + " of " + codes.length + " sets</span>" : '<span class="badge soon">no key yet</span>') + "</span><span>" +
+            '<button type="button" class="linkbtn" data-key="' + esc(s.id) + '">' + (has ? "Edit / upload key" : "Add / upload key") + "</button>" +
+            (has ? "" : ' <button type="button" class="linkbtn" data-remove="' + esc(s.id) + '">Remove</button>') + "</span></div>";
         }).join("") || '<p class="muted">No subjects yet.</p>') + "</div>";
     }).join("");
   }
@@ -184,11 +232,13 @@
   $("key-subject").addEventListener("change", renderKeySets);
 
   // ---------- tabs ----------
+  function openTab(id) {
+    Array.prototype.forEach.call(document.querySelectorAll(".tabbar button"), function (x) { x.classList.toggle("on", x.dataset.tab === id); });
+    Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (t) { t.hidden = t.id !== id; });
+    if (id === "tab-merit") showMerit();
+  }
   Array.prototype.forEach.call(document.querySelectorAll(".tabbar button"), function (b) {
-    b.addEventListener("click", function () {
-      Array.prototype.forEach.call(document.querySelectorAll(".tabbar button"), function (x) { x.classList.toggle("on", x === b); });
-      Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (t) { t.hidden = t.id !== b.dataset.tab; });
-    });
+    b.addEventListener("click", function () { openTab(b.dataset.tab); });
   });
 
   // ---------- answer keys ----------
@@ -227,8 +277,8 @@
     return Object.keys(p.changes).map(function (set) { var c = Object.keys(p.changes[set]).length; return set + ": " + c + " of " + n + " answers"; }).join(" · ");
   }
   $("key-check").addEventListener("click", async function () {
-    try { var p = await prepareKeys(); msg("key-msg", "Looks good. After saving: " + describe(p) + ".", "ok"); }
-    catch (e) { msg("key-msg", e.message, "bad"); }
+    try { var p = await prepareKeys(); msg("key-msg", "Looks good. Check the preview, then press Save. After saving: " + describe(p) + ".", "ok"); showKeyPreview(p); }
+    catch (e) { msg("key-msg", e.message, "bad"); $("key-preview").innerHTML = ""; }
   });
   $("key-save").addEventListener("click", async function () {
     var btn = this; btn.disabled = true;
@@ -243,7 +293,7 @@
       await OMREngine.setFiles(files);
       renderAll();
       msg("key-msg", "Saved " + describe(p) + ". The website will show the new key in about 1 to 2 minutes.", "ok");
-      $("key-text").value = "";
+      $("key-text").value = ""; $("key-preview").innerHTML = "";
     } catch (e) { console.error(e); msg("key-msg", e.message, "bad"); }
     finally { btn.disabled = false; }
   });
@@ -279,7 +329,29 @@
     } catch (e) { console.error(e); msg("subj-msg", e.message, "bad"); }
     finally { btn.disabled = false; }
   });
+  // Exams set by KEA often use the same OMR sheet as KREIS. Turning this on lets the scanner read them.
+  async function useKeaSheet(examId, msgId) {
+    var e = (S.cfg.exams || []).filter(function (x) { return x.id === examId; })[0]; if (!e) return;
+    if (!window.confirm("Read " + e.name + " sheets with the KEA OMR sheet layout (100 questions, options 1 to 5, sets A1 to D1, 9-digit register number)? Only do this if " + e.name + " uses that same sheet.")) return;
+    msg(msgId, "Saving…");
+    try {
+      await saveConfig(function (c) { c.exams.forEach(function (x) { if (x.id === examId) x.omr_layout = "kea_kreis"; }); }, "Read " + e.name + " sheets with the KEA OMR layout");
+      msg(msgId, "OMR photo checking is on for " + e.name + ". Check one sheet's score by hand before publishing many.", "ok");
+    } catch (err) { console.error(err); msg(msgId, err.message, "bad"); }
+  }
+  function renderBulkLayout() {
+    var sid = $("bulk-subject").value; if (!sid) return;
+    var e = examOf(sid), on = e.omr_layout === "kea_kreis";
+    $("bulk-layout").hidden = on; $("bulk-scan").disabled = !on;
+    if (!on) $("bulk-layout-text").textContent = "The website cannot read " + e.name + " OMR sheets yet. If " + e.name + " uses the same KEA OMR sheet as KREIS (100 questions, options 1 to 5, sets A1 to D1), turn it on below. Otherwise send a photo of a filled " + e.name + " sheet so its layout can be added, or use Add one sheet to type the answers.";
+  }
+  $("bulk-subject").addEventListener("change", renderBulkLayout);
+  $("bulk-layout-on").addEventListener("click", function () { var sid = $("bulk-subject").value; if (sid) useKeaSheet(examOf(sid).id, "bulk-msg"); });
   $("subj-list").addEventListener("click", async function (ev) {
+    var lb = ev.target.closest("button[data-layout]");
+    if (lb) { useKeaSheet(lb.dataset.layout, "subj-msg"); return; }
+    var kb = ev.target.closest("button[data-key]");
+    if (kb) { openTab("tab-keys"); $("key-subject").value = kb.dataset.key; renderKeySets(); $("key-subject").scrollIntoView({ behavior: "smooth" }); return; }
     var b = ev.target.closest("button[data-remove]"); if (!b) return;
     var sid = b.dataset.remove, s = S.cfg.subjects.filter(function (x) { return x.id === sid; })[0];
     if (!s || !window.confirm("Remove " + s.name + "? It has no answer key yet.")) return;
@@ -564,6 +636,188 @@
       else { box.innerHTML = '<img class="sheet" style="margin-top:10px" alt="Marked OMR sheet of register ' + esc(e.reg) + '" src="' + url + '">'; label = "Hide OMR sheet"; }
     } catch (err) { console.error(err); if (w) w.close(); box.innerHTML = '<p class="bad">' + esc(err.message) + "</p>"; }
     finally { b.disabled = false; b.textContent = label; }
+  });
+
+  // ---------- answer key files: PDF, Excel or CSV ----------
+  var PDFJS = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js";
+  var PDFJS_WORKER = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+  var XLSX_URL = "https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";
+  var scripts = {};
+  function loadScript(url) {
+    return scripts[url] || (scripts[url] = new Promise(function (ok, fail) {
+      var el = document.createElement("script"); el.src = url; el.onload = ok;
+      el.onerror = function () { delete scripts[url]; fail(new Error("Could not load a helper from the internet. Check the connection and try again.")); };
+      document.head.appendChild(el);
+    }));
+  }
+  // Rows of numbers / answers. A line with two or more question blocks side by side is split up.
+  function rowsToKeyText(rows, nsets) {
+    var out = [], width = nsets + 1;
+    rows.forEach(function (cells) {
+      cells = cells.map(function (c) { return String(c == null ? "" : c).trim(); }).filter(function (c) { return c !== ""; });
+      if (!cells.length || !/^\d{1,3}$/.test(cells[0])) return;   // headings and notes
+      if (cells.length > width && cells.length % width === 0) {
+        for (var i = 0; i < cells.length; i += width) if (/^\d{1,3}$/.test(cells[i])) out.push(cells.slice(i, i + width).join(" "));
+      } else out.push(cells.join(" "));
+    });
+    return out.join("\n");
+  }
+  async function pdfRows(buf) {
+    await loadScript(PDFJS);
+    window.pdfjsLib.GlobalWorkerOptions.workerSrc = PDFJS_WORKER;
+    var doc = await window.pdfjsLib.getDocument({ data: buf }).promise, rows = [];
+    for (var p = 1; p <= doc.numPages; p++) {
+      var items = (await (await doc.getPage(p)).getTextContent()).items, lines = [];
+      items.forEach(function (it) {
+        if (!it.str.trim()) return;
+        var y = it.transform[5], x = it.transform[4], line = null;
+        for (var i = 0; i < lines.length; i++) if (Math.abs(lines[i].y - y) < 3) { line = lines[i]; break; }
+        if (!line) lines.push(line = { y: y, parts: [] });
+        line.parts.push({ x: x, t: it.str.trim() });
+      });
+      lines.sort(function (a, b) { return b.y - a.y; }).forEach(function (l) {
+        rows.push(l.parts.sort(function (a, b) { return a.x - b.x; }).map(function (q) { return q.t; }).join(" ").split(/\s+/));
+      });
+    }
+    return rows;
+  }
+  async function sheetRows(buf) {
+    await loadScript(XLSX_URL);
+    var wb = window.XLSX.read(buf, { type: "array" }), rows = [];
+    wb.SheetNames.forEach(function (n) { rows = rows.concat(window.XLSX.utils.sheet_to_json(wb.Sheets[n], { header: 1, raw: false })); });
+    return rows;
+  }
+  $("key-file").addEventListener("change", async function () {
+    var f = this.files[0]; if (!f) return;
+    var sid = $("key-subject").value, nsets = sc(sid).set_codes.length;
+    $("key-pick").innerHTML = '<span class="cam" aria-hidden="true">📄</span>' + esc(f.name);
+    msg("key-msg", "Reading " + f.name + "…");
+    try {
+      var buf = new Uint8Array(await f.arrayBuffer()), name = f.name.toLowerCase(), rows;
+      if (/\.pdf$/.test(name) || f.type === "application/pdf") rows = await pdfRows(buf);
+      else if (/\.(xlsx|xls|csv)$/.test(name)) rows = await sheetRows(buf);
+      else rows = new TextDecoder().decode(buf).split(/\r?\n/).map(function (l) { return l.split(/[\s,;\t]+/); });
+      var text = rowsToKeyText(rows, nsets);
+      if (!text) throw new Error("No answer rows were found in this file. If it is a scanned picture, type the answers in instead.");
+      document.querySelector("input[name=key-mode][value=table]").checked = true; $("key-set-wrap").hidden = true; renderKeySets();
+      $("key-text").value = text;
+      var p = await prepareKeys();
+      showKeyPreview(p);
+      msg("key-msg", "Read from " + f.name + ": " + describe(p) + ". Check the preview against the key, correct the box if needed, then press Save.", "ok");
+    } catch (e) { console.error(e); msg("key-msg", e.message || "Could not read this file.", "bad"); $("key-preview").innerHTML = ""; }
+    finally { this.value = ""; }
+  });
+  function showKeyPreview(p) {
+    var sets = Object.keys(p.changes).sort(), n = sc(p.subject).num_questions, html = "<table class='grid-keys'><tr><th>Q</th>" +
+      sets.map(function (s) { return "<th>" + esc(s) + "</th>"; }).join("") + "</tr>";
+    for (var q = 1; q <= n; q++) html += "<tr><td>" + q + "</td>" + sets.map(function (s) {
+      var a = p.changes[s][q] != null ? p.changes[s][q] : p.changes[s][String(q)];
+      return a == null ? "<td class='bad'>–</td>" : "<td>" + esc(a) + "</td>"; }).join("") + "</tr>";
+    $("key-preview").innerHTML = html + "</table>";
+  }
+
+  // ---------- fetch from a KEA link ----------
+  var KEA_REQ = "admin/kea-request.json", KEA_STATE = "admin/kea-state.json";
+  async function keaRequest(stop) {
+    var url = $("kea-url").value.trim();
+    if (!stop && !/^https:\/\/([\w-]+\.)*karnataka\.gov\.in\//i.test(url)) throw new Error("Paste a KEA link starting with https:// on karnataka.gov.in.");
+    var req = { id: new Date().toISOString(), url: url, exam: $("kea-exam").value, kea_exam: $("kea-code").value.trim(),
+      districts: $("kea-districts").value.split(/[,;\n]+/).map(function (d) { return d.trim().toUpperCase(); }).filter(Boolean), stop: !!stop };
+    if (stop) { var old = await readFile(KEA_REQ); if (old) { old = JSON.parse(old); old.stop = true; req = old; } }
+    await commit({ "admin/kea-request.json": JSON.stringify(req, null, 1) + "\n" }, stop ? "Stop the KEA fetch" : "Start a KEA fetch: " + req.kea_exam);
+  }
+  $("kea-start").addEventListener("click", async function () {
+    var btn = this; btn.disabled = true;
+    try {
+      if (!$("kea-code").value.trim()) throw new Error("Enter the exam as it is called on the KEA page, e.g. KREISREC26.");
+      await keaRequest(false);
+      msg("kea-msg", "Started. GitHub begins in about a minute. Press Refresh progress from time to time; you can also close this page.", "ok");
+    } catch (e) { console.error(e); msg("kea-msg", e.message, "bad"); }
+    finally { btn.disabled = false; }
+  });
+  $("kea-stop").addEventListener("click", async function () {
+    var btn = this; btn.disabled = true;
+    try { await keaRequest(true); msg("kea-msg", "Stopping. The fetch stops after the centre it is working on. Start again to carry on.", "ok"); }
+    catch (e) { msg("kea-msg", e.message, "bad"); } finally { btn.disabled = false; }
+  });
+  $("kea-refresh").addEventListener("click", async function () {
+    var btn = this; btn.disabled = true; $("kea-status").innerHTML = "<p class='muted'>Loading…</p>";
+    try {
+      await loadTree();
+      var added = await mergeInbox(); if (added) showSearch("");
+      var st = await readFile(KEA_STATE), req = await readFile(KEA_REQ);
+      if (!st) { $("kea-status").innerHTML = "<p class='muted'>" + (req ? "Waiting for GitHub to start." : "No fetch has been started yet.") + "</p>"; return; }
+      st = JSON.parse(st); req = req ? JSON.parse(req) : {};
+      var t = st.totals || {}, label = { running: "Running", paused: "Paused, carries on in the next run", blocked: "KEA is limiting requests, will try again later",
+        captcha: "Stopped: KEA asked for a captcha", done: "Finished", error: "Stopped with a problem" }[st.status] || st.status;
+      if (req.stop) label += " (stop requested)";
+      var fails = (st.failures || []).slice(-15).reverse();
+      $("kea-status").innerHTML = "<p><b>" + esc(label) + "</b><br>" + esc(st.message || "") + "</p>" +
+        '<div class="facts" style="justify-content:flex-start"><span>Exam <b>' + esc(st.kea_exam_name || req.kea_exam || "") + "</b></span><span>Centres done <b>" + (t.centres || 0) +
+        "</b></span><span>Sheets published <b>" + (t.published || 0) + "</b></span><span>Could not read <b>" + (t.failed || 0) + "</b></span><span>Updated <b>" + esc((st.updated || "").replace("T", " ").replace("Z", " UTC")) + "</b></span></div>" +
+        (added ? "<p class='ok'>Added " + added + " new sheets to Search by register no. and the Merit list.</p>" : "") +
+        (fails.length ? "<details><summary>Latest problems (" + (st.failures || []).length + ")</summary><ul>" + fails.map(function (f) { return "<li>" + esc(f) + "</li>"; }).join("") + "</ul></details>" : "");
+    } catch (e) { console.error(e); $("kea-status").innerHTML = "<p class='bad'>" + esc(e.message) + "</p>"; }
+    finally { btn.disabled = false; }
+  });
+
+  // ---------- merit list ----------
+  function subjOf(id) { return (S.cfg.subjects || []).filter(function (s) { return s.id === id; })[0] || {}; }
+  function paperNo(s) { var p = String(s.paper || "").toLowerCase().replace(/\s+/g, ""); return /paper(i|1)$/.test(p) ? 1 : /paper(ii|2)$/.test(p) ? 2 : 0; }
+  function renderMeritSubjects() {
+    var sel = $("merit-p2"), v = sel.value, ex = $("merit-exam").value;
+    sel.innerHTML = '<option value="">All subjects</option>' + (S.cfg.subjects || []).filter(function (s) { return s.exam === ex && paperNo(s) === 2; })
+      .map(function (s) { return '<option value="' + esc(s.id) + '">' + esc(s.subject || s.name) + "</option>"; }).join("");
+    if (v && sel.querySelector('option[value="' + v + '"]')) sel.value = v;
+  }
+  $("merit-exam").addEventListener("change", function () { renderMeritSubjects(); showMerit(); });
+  $("merit-p2").addEventListener("change", showMerit);
+  $("merit-show").addEventListener("click", showMerit);
+  function meritRows() {
+    var ex = $("merit-exam").value, p2only = $("merit-p2").value, by = {};
+    S.index.forEach(function (e) {
+      var s = subjOf(e.subject); if ((s.exam || e.exam) !== ex) return;
+      var n = paperNo(s), c = by[e.reg] || (by[e.reg] = { reg: e.reg, name: "", centre: "", p1: null, p2: null, p2subject: "" });
+      if (e.name && !c.name) c.name = e.name;
+      if (e.centre && !c.centre) c.centre = e.centre;
+      if (n === 1) c.p1 = e.score;
+      else if (n === 2 || n === 0) { c.p2 = e.score; c.p2subject = s.subject || e.subject_name; c.p2id = e.subject; }
+    });
+    var exam = (S.cfg.exams || []).filter(function (e) { return e.id === ex; })[0] || {};
+    var rows = Object.keys(by).map(function (k) { var c = by[k]; c.total = (c.p1 || 0) + (c.p2 || 0); c.exam = exam.short || exam.name || ex; return c; })
+      .filter(function (c) { return !p2only || c.p2id === p2only; });
+    rows.sort(function (a, b) { return b.total - a.total || (b.p2 || 0) - (a.p2 || 0) || (b.p1 || 0) - (a.p1 || 0) || String(a.reg).localeCompare(String(b.reg)); });
+    rows.forEach(function (r, i) { r.rank = i && rows[i - 1].total === r.total ? rows[i - 1].rank : i + 1; });
+    return rows;
+  }
+  function showMerit() {
+    if (!S.cfg) return;
+    var rows = meritRows(), n1 = 0, n2 = 0;
+    rows.forEach(function (r) { if (r.p1 != null) n1++; if (r.p2 != null) n2++; });
+    $("merit-info").textContent = rows.length ? rows.length + " candidates (" + n1 + " with Paper I, " + n2 + " with Paper II). Ties share a rank." : "No published scores for this exam yet.";
+    $("merit-table").innerHTML = rows.length ? "<tr><th>Rank</th><th>Name</th><th>Register No.</th><th>Exam</th><th>Centre</th><th>Paper I</th><th>Paper II subject</th><th>Paper II</th><th>Grand total</th></tr>" +
+      rows.slice(0, 500).map(function (r) {
+        return "<tr><td>" + r.rank + "</td><td>" + esc(r.name) + "</td><td>" + esc(r.reg) + "</td><td>" + esc(r.exam) + "</td><td>" + esc(r.centre) + "</td><td>" +
+          (r.p1 == null ? "–" : fmt(r.p1)) + "</td><td>" + esc(r.p2subject) + "</td><td>" + (r.p2 == null ? "–" : fmt(r.p2)) + "</td><td><b>" + fmt(r.total) + "</b></td></tr>";
+      }).join("") : "";
+    if (rows.length > 500) $("merit-info").textContent += " Showing the top 500 here; the Excel file has everyone.";
+  }
+  $("merit-xlsx").addEventListener("click", async function () {
+    var btn = this; btn.disabled = true;
+    try {
+      var rows = meritRows(); if (!rows.length) throw new Error("No published scores for this exam yet.");
+      await loadScript(XLSX_URL);
+      var data = [["Rank", "Name", "Register Number", "Exam", "Exam Centre", "Paper I", "Paper II Subject", "Paper II", "Grand Total"]].concat(rows.map(function (r) {
+        return [r.rank, r.name, String(r.reg), r.exam, r.centre, r.p1 == null ? "" : r.p1, r.p2subject, r.p2 == null ? "" : r.p2, r.total];
+      }));
+      var ws = window.XLSX.utils.aoa_to_sheet(data), wb = window.XLSX.utils.book_new();
+      ws["!cols"] = [{ wch: 6 }, { wch: 28 }, { wch: 16 }, { wch: 12 }, { wch: 40 }, { wch: 9 }, { wch: 18 }, { wch: 9 }, { wch: 11 }];
+      window.XLSX.utils.book_append_sheet(wb, ws, "Merit list");
+      var p2 = $("merit-p2").value ? "-" + $("merit-p2").value : "";
+      window.XLSX.writeFile(wb, "merit-list-" + $("merit-exam").value + p2 + "-" + new Date().toISOString().slice(0, 10) + ".xlsx");
+      msg("merit-info", "Downloaded " + rows.length + " candidates.", "ok");
+    } catch (e) { console.error(e); msg("merit-info", e.message, "bad"); }
+    finally { btn.disabled = false; }
   });
 
   // ---------- start ----------

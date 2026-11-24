@@ -1,0 +1,54 @@
+name: Fetch OMR sheets from KEA
+
+# Started from the admin page ("Fetch from KEA link"), which saves admin/kea-request.json.
+# tools/kea_fetch.py walks the KEA page slowly (one request about every 20 seconds), scores
+# each centre's sheets and publishes them. Progress is saved after every centre, and the
+# schedule below carries on an unfinished fetch every 3 hours. A captcha stops it for good.
+on:
+  push:
+    branches: [main]
+    paths: [admin/kea-request.json]
+  schedule:
+    - cron: "23 */3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  actions: write
+
+concurrency:
+  group: kea-fetch
+  cancel-in-progress: false
+
+jobs:
+  fetch:
+    runs-on: ubuntu-latest
+    timeout-minutes: 340
+    steps:
+      - uses: actions/checkout@v4
+      - name: Anything to fetch?
+        id: check
+        run: |
+          if python3 tools/kea_fetch.py --check; then echo "run=yes" >> "$GITHUB_OUTPUT"; else echo "run=no" >> "$GITHUB_OUTPUT"; fi
+      - uses: actions/setup-python@v5
+        if: steps.check.outputs.run == 'yes'
+        with:
+          python-version: "3.12"
+      - name: Install
+        if: steps.check.outputs.run == 'yes'
+        run: pip install -r requirements.txt requests pymupdf cryptography
+      - name: Fetch, score and publish
+        if: steps.check.outputs.run == 'yes'
+        env:
+          KEA_DELAY: "20"
+          KEA_MAX_MINUTES: "300"
+        run: |
+          git config user.name "omr-kea-fetch"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          python3 tools/kea_fetch.py
+      - name: Republish the website
+        # Pushes made by this job do not start other workflows, so start the Pages build here.
+        if: always() && steps.check.outputs.run == 'yes'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh workflow run pages.yml --ref "${GITHUB_REF_NAME}" || true

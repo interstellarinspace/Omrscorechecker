@@ -120,6 +120,20 @@ Published results live in `published/results/`, one file per candidate holding a
 
 Each marked OMR sheet is stored once in `published/sheets/`, encrypted with its own random key. That key is inside the candidate's result file and the admin's encrypted list, so the candidate (from the Results page, "View my OMR sheet") and the admin (Search by register no.) can both open it.
 
+
+### Fetch from a KEA link, merit list, key files
+
+* **Fetch from KEA link** (admin tab): paste the KEA "View OMR Records" link and pick the exam. This saves
+  `admin/kea-request.json`, which starts `.github/workflows/kea-fetch.yml` (`tools/kea_fetch.py`). It walks
+  exam > district > subject > centres, downloads each centre's PDF, scores every page and publishes it the
+  same way as bulk upload. It is slow on purpose (one request about every 20 s), backs off on HTTP 429,
+  stops on a captcha, saves progress after every centre (`admin/kea-state.json`) and resumes every 3 hours.
+  New sheets reach the admin list through `admin/inbox/` (encrypted to the admin's public key, which the
+  admin page creates in `admin/vault.json` at sign-in).
+* **Merit list** (admin tab): Paper I + Paper II per register number, topper first, download as Excel.
+* **Answer keys**: upload the key as PDF, Excel or CSV, check the preview, then save. Exams & subjects has
+  an Add / upload key button next to every subject.
+
 ## Exams, papers and subjects
 
 `config.json` has an `exams` list (KREIS, KAS, FDA, SDA, Warder) and each subject names its `exam` and `paper`. Every exam has a tab and a page (`/exams/<id>`), and each subject has an answer-key page that shows "Key coming soon" until a key is added. An exam can override `num_questions`, `options`, `set_codes`, `marking` and `not_attempted_option`. Photo checking works for exams with `"omr_layout": "kea_kreis"` (the KEA sheet). Other exams need their sheet layout added from a sample photo; until then their sheets can be added in the admin page's **Add one sheet** tab by typing the answers.

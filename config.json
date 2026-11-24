@@ -90,6 +90,15 @@
       "slug": "science-answer-key"
     },
     {
+      "id": "computer",
+      "exam": "kreis",
+      "paper": "Paper II",
+      "subject": "Computer Science",
+      "name": "Paper II: Computer Science",
+      "short": "Computer",
+      "slug": "computer-science-answer-key"
+    },
+    {
       "id": "mathematics",
       "exam": "kreis",
       "paper": "Paper II",
