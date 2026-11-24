@@ -1,5 +1,5 @@
 {
- "request": "2026-11-24T08:56:07.866Z",
+ "request": "2026-11-24T09:01:18.970Z",
  "done": {},
  "failures": [],
  "totals": {
@@ -9,7 +9,7 @@
   "failed": 0
  },
  "status": "error",
- "message": "Could not find that exam on the KEA page. Exams listed there: KREISREC26 = KREIS TEACHERS RECRUITMENT - 2026 (22/11/2026); KSET26 = KARNATAKA STATE ELIGIBILITY TEST (KSET)- 20226 (11/10/2026); OLN26 = KREIS-NURSING OFFICER ,ESI-PHARMACY OFFICER, ESI-NURSING OFFICER & MUNICIPAL ADMINISTRATION (KK) -2026 (06/11/2026 , 07/11/2026 , 14/11/2026); PDP26 = PRISON DEPARTMENT RECRUITMENT (RPC)-2026 and COMPULSORY KANNADA EXAMINATION -2026 (21/11/2026); PRINC26 = DEPARTMENT OF SCHOOL EDUCATION (PRE - UNIVERSITY) PRINCIPAL RECRUITMENT -2026 (20-11-2026)",
- "started": "2026-11-24T08:56:36Z",
- "updated": "2026-11-24T08:56:38Z"
+ "message": "Photo reading is off for Warder. In the admin page, Exams & subjects, press Turn on next to Warder (if it uses the KEA OMR sheet), then start the fetch again.",
+ "started": "2026-11-24T09:01:44Z",
+ "updated": "2026-11-24T09:01:44Z"
 }
