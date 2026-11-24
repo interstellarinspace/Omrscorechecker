@@ -503,8 +503,8 @@
    "centre": "HAMDARD PU COLLEGE ,BEROON QUILLA, NAWRANGA DARWAZ, TARANATH ROAD",
    "district": "RAICHUR",
    "code": "232",
-   "reader": "c16d304ba7",
-   "read": "2026-11-24T13:05:20Z"
+   "reader": "a54816d9ad",
+   "read": "2026-11-24T17:19:19Z"
   }
  },
  "failures": [
@@ -563,9 +563,9 @@
  },
  "reader": "a54816d9ad",
  "status": "running",
- "message": "Fetching…",
+ "message": "Working on RAICHUR, General Knowledge Paper (RPC), centre 232.",
  "started": "2026-11-24T12:16:32Z",
- "updated": "2026-11-24T17:12:19Z",
+ "updated": "2026-11-24T17:19:19Z",
  "retry": 0,
  "kea_exam_name": "PRISON DEPARTMENT RECRUITMENT (RPC)-2026 and COMPULSORY KANNADA EXAMINATION -2026 (21/11/2026)",
  "districts": [
@@ -578,7 +578,6 @@
   "BALLARI"
  ],
  "redo": [
-  "PDP26|BELAGAVI|General Knowledge Paper (RPC)|133",
-  "PDP26|RAICHUR|General Knowledge Paper (RPC)|232"
+  "PDP26|BELAGAVI|General Knowledge Paper (RPC)|133"
  ]
 }
