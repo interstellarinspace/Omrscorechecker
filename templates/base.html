@@ -149,7 +149,15 @@
   .pick { border-color:#f9a8d4; background:linear-gradient(135deg,#fff7ed,#fdf2f8 50%,#f0f9ff); }
   .ring { background:conic-gradient(#db2777 0, #7c3aed var(--pct,0%), #fde7f3 0); }
   .facts span { background:#fdf2f8; color:#9d174d; } .facts span:nth-child(2) { background:#e0f2fe; color:#075985; } .facts span:nth-child(3) { background:#dcfce7; color:#166534; }
+  .quote-wrap { max-width:720px; margin:12px auto 0; padding:0 16px; }
+  .quote { color:#fff; border-radius:14px; padding:10px 14px; min-height:58px; display:flex; flex-direction:column; justify-content:center; font-weight:700; font-size:.98rem; line-height:1.35;
+           background-image:var(--grad); box-shadow:0 8px 18px -12px rgba(219,39,119,.7); transition:background-image .6s; }
+  .quote .q-who { font-weight:500; font-size:.8rem; opacity:.9; margin-top:2px; }
+  .quote.q-in { animation:qin .6s ease; }
+  .quote.q-still { animation:none; }
+  @keyframes qin { from { opacity:0; transform:translateY(6px); } to { opacity:1; transform:none; } }
   @media print {
+    .quote-wrap { display:none !important; }
     body { background:#fff !important; }
     .top, .foot, #intro, #forms, #res-share, #res-omr, #again, .err.form-err, #nav-back { display:none !important; }
     .card { box-shadow:none !important; border:1px solid #ccc !important; break-inside:avoid; }
@@ -173,6 +181,8 @@
     <span class="sep"></span><a href="{{ url_for('results_page') }}"{% if request.endpoint == 'results_page' %} class="on"{% endif %}>Search by Register No. &amp; Exam</a>
   </nav>
 </header>
+{% block quotes %}<aside class="quote-wrap" aria-label="Motivational quote"><div class="quote" id="quote" aria-live="polite"><span class="q-text"></span><span class="q-who"></span></div></aside>
+<script src="{{ url_for('static', filename='quotes.js') }}" defer></script>{% endblock %}
 <main>{% block body %}{% endblock %}</main>
 {% if static_site and build_id %}<script>
 // A page kept in the browser's cache from before an update reloads itself once with the new version.
