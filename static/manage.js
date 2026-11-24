@@ -235,7 +235,14 @@
   function openTab(id) {
     Array.prototype.forEach.call(document.querySelectorAll(".tabbar button"), function (x) { x.classList.toggle("on", x.dataset.tab === id); });
     Array.prototype.forEach.call(document.querySelectorAll(".tab"), function (t) { t.hidden = t.id !== id; });
-    if (id === "tab-merit") showMerit();
+    if (id === "tab-merit") {
+      if (!candidates().length) {   // open on an exam that has scores
+        var count = {}; S.index.forEach(function (e) { var x = subjOf(e.subject).exam || e.exam; count[x] = (count[x] || 0) + 1; });
+        var best = Object.keys(count).sort(function (a, b) { return count[b] - count[a]; })[0];
+        if (best && $("merit-exam").querySelector('option[value="' + best + '"]')) { $("merit-exam").value = best; renderMeritSubjects(); }
+      }
+      showMerit();
+    }
   }
   Array.prototype.forEach.call(document.querySelectorAll(".tabbar button"), function (b) {
     b.addEventListener("click", function () { openTab(b.dataset.tab); });
@@ -857,7 +864,7 @@
       st = JSON.parse(st); req = req ? JSON.parse(req) : {};
       if (req.id && st.request !== req.id && !req.stop) { $("kea-status").innerHTML = "<p><b>Starting</b><br>GitHub is starting the new fetch (" + esc(req.kea_exam || "") + "). Press Refresh progress again in a minute.</p>"; return; }
       var t = st.totals || {}, label = { running: "Running", paused: "Paused, carries on in the next run", blocked: "KEA is limiting requests, will try again later",
-        captcha: "Stopped: KEA asked for a captcha", done: "Finished", error: "Stopped with a problem" }[st.status] || st.status;
+        captcha: "Stopped: KEA asked for a captcha", done: "Finished", stopped: "Stopped", error: "Stopped with a problem" }[st.status] || st.status;
       if (req.stop) label += " (stop requested)";
       var fails = (st.failures || []).slice(-15).reverse();
       $("kea-status").innerHTML = "<p><b>" + esc(label) + "</b><br>" + esc(st.message || "") + "</p>" +
@@ -872,61 +879,90 @@
   // ---------- merit list ----------
   function subjOf(id) { return (S.cfg.subjects || []).filter(function (s) { return s.id === id; })[0] || {}; }
   function paperNo(s) { var p = String(s.paper || "").toLowerCase().replace(/\s+/g, ""); return /paper(i|1)$/.test(p) ? 1 : /paper(ii|2)$/.test(p) ? 2 : 0; }
+  function hasPaper2(ex) { return (S.cfg.subjects || []).some(function (s) { return s.exam === ex && paperNo(s) === 2; }); }
   function renderMeritSubjects() {
-    var sel = $("merit-p2"), v = sel.value, ex = $("merit-exam").value;
+    var ex = $("merit-exam").value, two = hasPaper2(ex), mode = $("merit-mode"), mv = mode.value;
+    mode.innerHTML = two ? '<option value="both">Paper I + Paper II (grand total)</option><option value="p1">Paper I only</option><option value="p2">Paper II only</option>' : '<option value="p1">Paper I</option>';
+    if (mv && mode.querySelector('option[value="' + mv + '"]')) mode.value = mv;
+    var sel = $("merit-p2"), v = sel.value;
     sel.innerHTML = '<option value="">All subjects</option>' + (S.cfg.subjects || []).filter(function (s) { return s.exam === ex && paperNo(s) === 2; })
       .map(function (s) { return '<option value="' + esc(s.id) + '">' + esc(s.subject || s.name) + "</option>"; }).join("");
     if (v && sel.querySelector('option[value="' + v + '"]')) sel.value = v;
+    $("merit-p2-wrap").hidden = !two || mode.value === "p1";
   }
   $("merit-exam").addEventListener("change", function () { renderMeritSubjects(); showMerit(); });
+  $("merit-mode").addEventListener("change", function () { renderMeritSubjects(); showMerit(); });
   $("merit-p2").addEventListener("change", showMerit);
   $("merit-show").addEventListener("click", showMerit);
-  function meritRows() {
-    var ex = $("merit-exam").value, p2only = $("merit-p2").value, by = {};
+  // One row per candidate; then a ranked list for the chosen view ("both", "p1" or "p2").
+  function candidates() {
+    var ex = $("merit-exam").value, by = {};
     S.index.forEach(function (e) {
       var s = subjOf(e.subject); if ((s.exam || e.exam) !== ex) return;
-      var n = paperNo(s), c = by[e.reg] || (by[e.reg] = { reg: e.reg, name: "", centre: "", p1: null, p2: null, p2subject: "" });
+      var n = paperNo(s), c = by[e.reg] || (by[e.reg] = { reg: e.reg, name: "", centre: "", p1: null, p2: null, p2subject: "", p2id: "" });
       if (e.name && !c.name) c.name = e.name;
       if (e.centre && !c.centre) c.centre = e.centre;
-      if (n === 1) c.p1 = e.score;
-      else if (n === 2 || n === 0) { c.p2 = e.score; c.p2subject = s.subject || e.subject_name; c.p2id = e.subject; }
+      if (n === 2) { c.p2 = e.score; c.p2subject = s.subject || e.subject_name; c.p2id = e.subject; }
+      else c.p1 = e.score;
     });
     var exam = (S.cfg.exams || []).filter(function (e) { return e.id === ex; })[0] || {};
-    var rows = Object.keys(by).map(function (k) { var c = by[k]; c.total = (c.p1 || 0) + (c.p2 || 0); c.exam = exam.short || exam.name || ex; return c; })
-      .filter(function (c) { return !p2only || c.p2id === p2only; });
+    return Object.keys(by).map(function (k) { var c = by[k]; c.exam = exam.short || exam.name || ex; return c; });
+  }
+  function ranked(mode, p2only) {
+    var rows = candidates().filter(function (c) {
+      if (mode === "p1") return c.p1 != null;
+      if (mode === "p2") return c.p2 != null && (!p2only || c.p2id === p2only);
+      return !p2only || c.p2id === p2only;
+    }).map(function (c) { var r = Object.assign({}, c); r.total = mode === "p1" ? c.p1 : mode === "p2" ? c.p2 : (c.p1 || 0) + (c.p2 || 0); return r; });
     rows.sort(function (a, b) { return b.total - a.total || (b.p2 || 0) - (a.p2 || 0) || (b.p1 || 0) - (a.p1 || 0) || String(a.reg).localeCompare(String(b.reg)); });
     rows.forEach(function (r, i) { r.rank = i && rows[i - 1].total === r.total ? rows[i - 1].rank : i + 1; });
     return rows;
   }
+  function meritColumns(mode) {
+    var c = [["Rank", "rank"], ["Name", "name"], ["Register Number", "reg"], ["Exam", "exam"], ["Exam Centre", "centre"]];
+    if (mode === "p1") return c.concat([["Paper I", "p1"]]);
+    if (mode === "p2") return c.concat([["Paper II Subject", "p2subject"], ["Paper II", "p2"]]);
+    return c.concat([["Paper I", "p1"], ["Paper II Subject", "p2subject"], ["Paper II", "p2"], ["Grand Total", "total"]]);
+  }
   function showMerit() {
     if (!S.cfg) return;
-    var rows = meritRows(), n1 = 0, n2 = 0;
-    rows.forEach(function (r) { if (r.p1 != null) n1++; if (r.p2 != null) n2++; });
-    $("merit-info").textContent = rows.length ? rows.length + " candidates (" + n1 + " with Paper I, " + n2 + " with Paper II). Ties share a rank." : "No published scores for this exam yet.";
-    $("merit-table").innerHTML = rows.length ? "<tr><th>Rank</th><th>Name</th><th>Register No.</th><th>Exam</th><th>Centre</th><th>Paper I</th><th>Paper II subject</th><th>Paper II</th><th>Grand total</th></tr>" +
+    var mode = $("merit-mode").value || "p1", rows = ranked(mode, $("merit-p2").value), cols = meritColumns(mode);
+    var label = { both: "Paper I + Paper II", p1: "Paper I", p2: "Paper II" }[mode];
+    $("merit-info").className = "muted";
+    $("merit-info").textContent = rows.length ? label + ": " + rows.length + " candidate" + (rows.length === 1 ? "" : "s") + ", topper first. Ties share a rank." :
+      "No published scores for " + ($("merit-exam").selectedOptions[0] || {}).textContent + " (" + label + ") yet.";
+    $("merit-table").innerHTML = rows.length ? "<tr>" + cols.map(function (c) { return "<th>" + c[0] + "</th>"; }).join("") + "</tr>" +
       rows.slice(0, 500).map(function (r) {
-        return "<tr><td>" + r.rank + "</td><td>" + esc(r.name) + "</td><td>" + esc(r.reg) + "</td><td>" + esc(r.exam) + "</td><td>" + esc(r.centre) + "</td><td>" +
-          (r.p1 == null ? "–" : fmt(r.p1)) + "</td><td>" + esc(r.p2subject) + "</td><td>" + (r.p2 == null ? "–" : fmt(r.p2)) + "</td><td><b>" + fmt(r.total) + "</b></td></tr>";
+        return "<tr>" + cols.map(function (c) {
+          var v = r[c[1]], num = c[1] === "p1" || c[1] === "p2" || c[1] === "total";
+          return "<td>" + (num ? (v == null ? "–" : (c[1] === "total" ? "<b>" + fmt(v) + "</b>" : fmt(v))) : esc(v)) + "</td>"; }).join("") + "</tr>";
       }).join("") : "";
     if (rows.length > 500) $("merit-info").textContent += " Showing the top 500 here; the Excel file has everyone.";
   }
   $("merit-xlsx").addEventListener("click", async function () {
     var btn = this; btn.disabled = true;
     try {
-      var rows = meritRows(); if (!rows.length) throw new Error("No published scores for this exam yet.");
+      var ex = $("merit-exam").value, p2only = $("merit-p2").value, modes = hasPaper2(ex) ? ["both", "p1", "p2"] : ["p1"];
+      var names = { both: "Paper I + II", p1: "Paper I", p2: "Paper II" }, wb = null, total = 0;
       await loadScript(XLSX_URL);
-      var data = [["Rank", "Name", "Register Number", "Exam", "Exam Centre", "Paper I", "Paper II Subject", "Paper II", "Grand Total"]].concat(rows.map(function (r) {
-        return [r.rank, r.name, String(r.reg), r.exam, r.centre, r.p1 == null ? "" : r.p1, r.p2subject, r.p2 == null ? "" : r.p2, r.total];
-      }));
-      var ws = window.XLSX.utils.aoa_to_sheet(data), wb = window.XLSX.utils.book_new();
-      ws["!cols"] = [{ wch: 6 }, { wch: 28 }, { wch: 16 }, { wch: 12 }, { wch: 40 }, { wch: 9 }, { wch: 18 }, { wch: 9 }, { wch: 11 }];
-      window.XLSX.utils.book_append_sheet(wb, ws, "Merit list");
-      var p2 = $("merit-p2").value ? "-" + $("merit-p2").value : "";
-      window.XLSX.writeFile(wb, "merit-list-" + $("merit-exam").value + p2 + "-" + new Date().toISOString().slice(0, 10) + ".xlsx");
-      msg("merit-info", "Downloaded " + rows.length + " candidates.", "ok");
+      wb = window.XLSX.utils.book_new();
+      modes.forEach(function (m) {
+        var rows = ranked(m, m === "p1" ? "" : p2only), cols = meritColumns(m); if (!rows.length) return;
+        total = Math.max(total, rows.length);
+        var data = [cols.map(function (c) { return c[0]; })].concat(rows.map(function (r) {
+          return cols.map(function (c) { var v = r[c[1]]; return v == null ? "" : c[1] === "reg" ? String(v) : v; });
+        }));
+        var ws = window.XLSX.utils.aoa_to_sheet(data);
+        ws["!cols"] = cols.map(function (c) { return { wch: { name: 28, centre: 40, reg: 16, p2subject: 18 }[c[1]] || 11 }; });
+        window.XLSX.utils.book_append_sheet(wb, ws, names[m]);
+      });
+      if (!total) throw new Error("No published scores for this exam yet.");
+      window.XLSX.writeFile(wb, "merit-list-" + ex + (p2only ? "-" + p2only : "") + "-" + new Date().toISOString().slice(0, 10) + ".xlsx");
+      msg("merit-info", "Downloaded the merit list (" + wb.SheetNames.join(", ") + ").", "ok");
     } catch (e) { console.error(e); msg("merit-info", e.message, "bad"); }
     finally { btn.disabled = false; }
   });
+
 
   // ---------- stale page check ----------
   // Browsers may keep an old copy of this page for a while after an update. If the live page

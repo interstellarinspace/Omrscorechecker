@@ -413,6 +413,18 @@ def link_ok(url):
     return url.startswith("https://") and bool(ALLOWED_HOST.search(host))
 
 
+def stop_requested(req_id):
+    """True when the admin pressed Stop, or started a different fetch, while this run was going."""
+    if git("fetch", "-q", "origin", os.environ.get("GITHUB_REF_NAME", "main"), check=False).returncode:
+        return False
+    r = git("show", "FETCH_HEAD:" + REQUEST, check=False)
+    try:
+        latest = json.loads(r.stdout) if r.returncode == 0 else None
+    except ValueError:
+        return False
+    return bool(latest) and (latest.get("stop") or latest.get("id") != req_id)
+
+
 def pending(req, state):
     if not req or req.get("stop"):
         return False
@@ -514,6 +526,9 @@ def run(args):
                         key = f"{kea_exam}|{dval}|{sval.strip()}|{code}"
                         if key in state["done"]:
                             continue
+                        if not args.no_push and stop_requested(req["id"]):
+                            stop("stopped", "Stopped by the admin. Press Start fetching to carry on.")
+                            return 0
                         if time.time() > deadline:
                             stop("paused", "Paused to stay within GitHub's time limit. It carries on automatically in the next run.")
                             return 0

@@ -158,11 +158,12 @@
 
   <section class="card tab" id="tab-merit" hidden>
     <h2>Merit list</h2>
-    <p class="muted">Every candidate's Paper I and Paper II scores, matched by register number, from topper to lowest.</p>
+    <p class="muted">Every candidate's scores from topper to lowest. Paper I and Paper II are matched by register number. The Excel file has one sheet for each list.</p>
     <div class="row2">
       <div><label for="merit-exam">Exam</label><select id="merit-exam"></select></div>
-      <div><label for="merit-p2">Paper II subject</label><select id="merit-p2"></select></div>
+      <div><label for="merit-mode">List</label><select id="merit-mode"></select></div>
     </div>
+    <div id="merit-p2-wrap"><label for="merit-p2">Paper II subject</label><select id="merit-p2"></select></div>
     <p></p>
     <div class="row2"><button class="btn secondary" type="button" id="merit-show">Show list</button><button class="btn" type="button" id="merit-xlsx">Download Excel</button></div>
     <p class="muted" id="merit-info"></p>
