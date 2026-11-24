@@ -17,6 +17,7 @@ through admin/inbox/*.bin, encrypted to the admin's public key (set up on admin 
 """
 import argparse
 import base64
+import collections
 import datetime as dt
 import hashlib
 import html
@@ -276,6 +277,8 @@ def score_page(png, subject_id, cfg, text=""):
             out["grading"] = K.grade(res["answers"], key, c)
     if len(re.sub(r"\D", "", reg or "")) < 5:
         out["error"] = out["error"] or "register number not read"
+    out["answers_text"] = " ".join(a["answer"] if a["status"] == "ok" else ("*" if a["status"] == "multiple" else "0")
+                                   for a in res["answers"])
     img = S.annotate(res, out["grading"])
     h, w = img.shape[:2]
     sc = min(1.0, 1600.0 / max(h, w))
@@ -327,6 +330,44 @@ def seal_for_admin(pub_b64, obj):
     wrapped = pub.encrypt(k, padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None))
     body = seal_bytes(k, json.dumps(obj, ensure_ascii=False).encode())
     return json.dumps({"v": 1, "k": b64(wrapped), "data": b64(body)})
+
+
+def small_jpg(png, side=1400, quality=70):
+    import cv2
+    import numpy as np
+    img = cv2.imdecode(np.frombuffer(png, np.uint8), cv2.IMREAD_COLOR)
+    if img is None:
+        return b""
+    h, w = img.shape[:2]
+    sc = min(1.0, side / float(max(h, w)))
+    if sc < 1:
+        img = cv2.resize(img, (int(w * sc), int(h * sc)), interpolation=cv2.INTER_AREA)
+    return cv2.imencode(".jpg", img, [cv2.IMWRITE_JPEG_QUALITY, quality])[1].tobytes()
+
+
+def review_row(r, subj, exam, sid, code, cname, dname, pno):
+    """A sheet that could not be published as it is, in the shape of a row in the admin's bulk table."""
+    out = {k: r.get(k) for k in ("register_number", "booklet_serial", "name", "name_sure", "version", "answers_text",
+                                  "marking", "five", "grading", "version_guessed")}
+    out.update(subject=sid, subject_name=subj["name"], exam=exam["id"], exam_short=exam.get("short", ""),
+               centre=f"{code} {cname}"[:120], district=dname, file=f"KEA {dname} {code} p{pno}",
+               register_complete=bool(r.get("register_number")) and "?" not in (r.get("register_number") or ""))
+    if r.get("answers_text"):
+        out["error"] = r["error"]
+    else:
+        out["scan_error"] = r["error"]
+    if r.get("image"):
+        out["image_b64"] = b64(r["image"])
+    return out
+
+
+def save_review(review, admin_pub, label):
+    safe = re.sub(r"[^\w.-]+", "-", label)[:80]
+    path = f"admin/review/{safe}.bin"
+    os.makedirs(rel("admin/review"), exist_ok=True)
+    with open(rel(path), "w", encoding="utf-8") as f:
+        f.write(seal_for_admin(admin_pub, {"v": 1, "label": label, "rows": review}))
+    return path
 
 
 def publish(rows, cfg, admin_pub, label):
@@ -436,6 +477,8 @@ def stop_requested(req_id):
 def pending(req, state):
     if not req or req.get("stop"):
         return False
+    if state and state.get("request") == req.get("id") and req.get("recheck", 0) > state.get("recheck", 0):
+        return True
     if state and state.get("request") == req.get("id") and state.get("status") == "captcha":
         return req.get("retry", 0) > state.get("retry", 0)   # the admin pressed Continue
     return not (state and state.get("request") == req.get("id") and state.get("status") == "done")
@@ -450,6 +493,21 @@ def run(args):
         return 0
     if state.get("request") != req.get("id"):
         state = {"request": req["id"], "done": {}, "failures": [], "totals": {"centres": 0, "sheets": 0, "published": 0, "failed": 0}}
+    if req.get("recheck", 0) > state.get("recheck", 0):
+        # Read again the centres that had sheets with problems (with the newest reader). Their
+        # good sheets are published again too, which simply replaces them.
+        t = state["totals"]
+        for key, d in list(state["done"].items()):
+            if d.get("failed"):
+                del state["done"][key]
+                t["centres"] -= 1; t["sheets"] -= d.get("sheets", 0); t["published"] -= d.get("published", 0); t["failed"] -= d["failed"]
+                parts = key.split("|")
+                if len(parts) == 4:
+                    tag = f"{parts[1]} centre {parts[3]} page"
+                    state["failures"] = [f for f in state["failures"] if not f.startswith(tag)]
+        state["recheck"] = req["recheck"]
+        if state.get("status") == "done":
+            state["status"] = "running"
     state.update(status="running", message="Fetching…", started=state.get("started") or now(), updated=now(),
                  retry=req.get("retry", 0))
 
@@ -550,21 +608,38 @@ def run(args):
                             state["done"][key] = {"sheets": 0, "note": "no file"}
                             continue
                         site.download(link, tmp)
-                        rows, failed = [], 0
+                        rows, failed, review = [], 0, []
                         for pno, png, text in pdf_pages(tmp):
                             try:
                                 r = score_page(png, sid, cfg, text)
                             except Exception as e:  # noqa: BLE001 - a bad page must not stop the centre
-                                r = {"error": str(e)[:80]}
+                                r = {"error": str(e)[:80], "image": small_jpg(png)}
                             if r.get("error"):
                                 failed += 1
                                 state["failures"].append(f"{dname} centre {code} page {pno}: {r['error']}")
+                                review.append(review_row(r, subj, exam, sid, code, cname, dname, pno))
                                 continue
                             r.update(subject=sid, subject_name=subj["name"], exam=exam["id"], exam_short=exam.get("short", ""),
                                      centre=f"{code} {cname}"[:120], district=dname, file=f"KEA {code} p{pno}")
                             rows.append(r)
+                        # A centre's register numbers share their first digits. One that does not was
+                        # most likely read off by a row: hold it back for the admin to check.
+                        heads = collections.Counter(re.sub(r"\D", "", r["register_number"])[:5] for r in rows)
+                        if heads and len(rows) >= 5:
+                            common, n = heads.most_common(1)[0]
+                            if n >= 0.6 * len(rows):
+                                odd = [r for r in rows if re.sub(r"\D", "", r["register_number"])[:5] != common]
+                                for r in odd:
+                                    rows.remove(r)
+                                    failed += 1
+                                    r["error"] = "register number does not match the rest of the centre (check it)"
+                                    pno = r["file"].split()[-1].lstrip("p")
+                                    state["failures"].append(f"{dname} centre {code} page {pno}: {r['error']}")
+                                    review.append(review_row(r, subj, exam, sid, code, cname, dname, pno))
                         if rows:
                             publish(rows, cfg, vault["pub"], f"{exam.get('short', '')} {subj['name']} centre {code}")
+                        if review:   # the sheets that need a look go to the admin, who can fix and publish them
+                            save_review(review, vault["pub"], f"{exam['id']}-{sid}-{dname}-{code}")
                         state["done"][key] = {"sheets": len(rows) + failed, "published": len(rows), "failed": failed, "centre": cname[:80]}
                         t = state["totals"]
                         t["centres"] += 1; t["sheets"] += len(rows) + failed; t["published"] += len(rows); t["failed"] += failed

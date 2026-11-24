@@ -169,6 +169,10 @@ def test_full_fetch():
     assert len(res["results"]) == 1 and res["results"][0]["grading"]["score"] == e["score"]
     sheets = os.listdir(os.path.join(tmp, "published/sheets"))
     assert len(sheets) == 1, sheets                  # same candidate re-published: old sheet files removed
+    # the sheets that failed come to the admin to fix, with their pictures
+    review = sorted(os.listdir(os.path.join(tmp, "admin/review")))
+    rows = [r for p in review for r in open_inbox(key, os.path.join(tmp, "admin/review", p))["rows"]]
+    assert len(rows) == 5 and all(r.get("image_b64") and r["subject"] for r in rows), len(rows)
     print("score", e["score"], "reg", e["reg"], "requests", HITS["total"])
     # a second run has nothing left to do
     assert not KF.pending(json.load(open(os.path.join(tmp, KF.REQUEST))), st)

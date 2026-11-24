@@ -274,6 +274,7 @@ def _locate(img):
     if len(circ) < 100:
         raise ScanError("Could not see the answer bubbles clearly. Retake the photo in better light, in focus.")
     grids0 = _template_grids()
+    fill = _fill_map(_ink_map(img), radius)
     best = None
     for aL in range(0, iL[-1] + 1):
         for d in range(-3, 4):
@@ -288,14 +289,15 @@ def _locate(img):
             tu = m.to_tu(circ[:, :2])
             # circles on the grids, minus circles just outside them (a grid one row off still
             # lands on circles, but then also on the row before or after, where there are none)
-            score = sum(_match(tu, grids0[f"answers{k}"], 0.25)[2].sum() - 2 * _edge_rows(tu, grids0[f"answers{k}"])
-                        for k in range(4))
-            score += sum(_match(tu, grids0[h], 0.25)[2].sum() - 2 * _edge_rows(tu, grids0[h]) for h in ("register", "serial"))
-            if best is None or score > best[0]:
-                best = (score, aL, aR, m, tu)
-    if best is None or best[0] < 120:
+            sa = sum(_match(tu, grids0[f"answers{k}"], 0.25)[2].sum() - 2 * _edge_rows(tu, grids0[f"answers{k}"])
+                     for k in range(4))
+            sh = sum(_match(tu, grids0[h], 0.25)[2].sum() - 2 * _edge_rows(tu, grids0[h]) for h in ("register", "serial"))
+            score = sa + sh - 25 * _marks_past_ends(fill, m, grids0)
+            if sa + sh >= 120 and (best is None or score > best[0]):   # the bubbles must fit well
+                best = (score, aL, aR, m, tu, sa + sh)
+    if best is None or best[5] < 120:   # how well the bubbles fit, whatever the pen marks
         raise ScanError("Could not line up the answer grid. Make sure the whole sheet is in the photo, flat and in focus.")
-    score, aL, aR, m, tu = best
+    score, aL, aR, m, tu, _ = best
     grids = {}
     for name, g in grids0.items():
         fit_steps = name.startswith("answers") or name in ("register", "serial")
@@ -323,6 +325,10 @@ def _ink_map(img):
     s = cv2.cvtColor(img, cv2.COLOR_BGR2HSV)[:, :, 1]
     sbg = cv2.medianBlur(s, k).astype(np.float32)
     sat = np.clip((s.astype(np.float32) - sbg) / 255, 0, 1)
+    # Pen and pencil are blue, black or grey. Red and orange (KEA's watermark and print) are
+    # strongly saturated too, so they do not count as ink.
+    reddish = (r.astype(np.int16) - img[:, :, 0].astype(np.int16)) > 60
+    sat[reddish] = 0
     return 0.5 * dark + sat
 
 
@@ -363,6 +369,26 @@ def _pick(row, thr, gap, light=None):
     if s >= thr and ((b - s) < gap or s >= 0.75 * b):
         return "multiple", [int(i) for i in order if row[i] >= thr]
     return "ok", int(order[0])
+
+
+def _marks_past_ends(fill, m, grids0):
+    """How many answer blocks have pen marks in the row just before or just after them.
+
+    On a sheet read on the right rows there are none: the row before is the heading and the
+    row after is the footer. When the watermark hides timing marks, a row numbering one off
+    still lands on bubbles, but then the first or last answer row shows up past an end.
+    """
+    n = 0
+    for k in range(4):
+        g = grids0[f"answers{k}"]
+        s, _ = _scores(fill, m, g)
+        inside = float(np.median(s.max(1) - np.median(s, 1)))
+        if inside <= 0:
+            continue
+        for u0 in (g["u0"] - g["du"], g["u0"] + g["ny"] * g["du"]):
+            e, _ = _scores(fill, m, dict(g, u0=u0, ny=1))
+            n += (e.max(1) - np.median(e, 1))[0] > 0.25 * inside
+    return n
 
 
 def scan(image, num_questions=100):
@@ -426,6 +452,18 @@ def scan(image, num_questions=100):
             digits += str(idx) if st == "ok" else "?"
             ok &= st == "ok"
         return digits, ok, s, c
+
+    # KEA's sets are A1 to D1: the version number is always 1. When it reads 2, 3 or 4 the
+    # header was placed rows too low (the watermark hid the middle edge marks), so move the
+    # register, booklet and version grids up until the number reads 1.
+    vs, _ = grid_scores("version")
+    st_d, idg = _pick(vs[:, 1], thr, gap)
+    if st_d == "ok" and idg:
+        moved = {n: dict(grids[n], u0=grids[n]["u0"] - idg * grids[n]["du"]) for n in ("register", "serial", "version")}
+        s2, _ = _scores(fill, m, moved["version"])
+        s2 = s2 - np.percentile(s2, 30)
+        if _pick(s2[:, 1], thr, gap) == ("ok", 0):
+            grids.update(moved)
 
     reg, reg_ok, reg_s, reg_c = read_digits("register")
     ser, ser_ok, ser_s, ser_c = read_digits("serial")

@@ -396,7 +396,7 @@
   });
   function rowStatus(r) {
     if (r.scan_error) return ["bad", r.scan_error];
-    if (r.error) return ["bad", r.error + (r.answers_text && /Version Code/.test(r.error) ? " Choose the set in the Set column to score it." : "")];
+    if (r.error) return ["bad", r.error + (r.answers_text && /version code/i.test(r.error) ? " Choose the set in the Set column to score it." : "")];
     if (OMRCrypto.digits(r.register_number).length !== 9) return ["warn", "Check the register number"];
     if (OMRCrypto.digits(r.booklet_serial).length !== 6) return ["warn", "Check the booklet number"];
     if (r.version_guessed) return ["ok", "Ready. The set was not shaded, so it was worked out from the answers (" + r.version + ")."];
@@ -404,7 +404,7 @@
   }
   function setCell(r, i) {
     if (r.grading && !r.set_chosen) return esc(r.version || "–") + (r.version_guessed ? " *" : "");
-    if (!r.answers_text || !/Version Code/.test(r.error || r.set_chosen || "")) return esc(r.version || "–");
+    if (!r.answers_text || !/version code/i.test(r.error || r.set_chosen || "")) return esc(r.version || "–");
     var sj = (S.cfg.subjects || []).filter(function (x) { return x.id === r.subject; })[0] || {};
     var codes = sj.set_codes || S.cfg.set_codes || ["A1", "B1", "C1", "D1"];
     return '<select data-i="' + i + '" data-f="set"><option value="">Choose…</option>' + codes.map(function (c) {
@@ -417,7 +417,7 @@
     $("bulk-table").innerHTML = "<tr><th>#</th><th>Photo</th><th>Register no.</th><th>Booklet no.</th><th>Name</th><th>Set</th><th>Score</th><th>Status</th></tr>" +
       bulk.map(function (r, i) {
         var st = r.dup ? ["warn", "Same register number as an earlier sheet"] : rowStatus(r);
-        return "<tr><td>" + (i + 1) + "</td><td>" + esc(r.file) + "</td>" +
+        return "<tr><td>" + (i + 1) + "</td><td>" + (r.image ? '<a href="#" data-view="' + i + '">' + esc(r.file) + "</a>" : esc(r.file)) + "</td>" +
           '<td><input data-i="' + i + '" data-f="register_number" inputmode="numeric" value="' + esc(r.register_number || "") + '"></td>' +
           '<td><input data-i="' + i + '" data-f="booklet_serial" inputmode="numeric" value="' + esc(r.booklet_serial || "") + '"></td>' +
           '<td><input data-i="' + i + '" data-f="name" value="' + esc(r.name || "") + '" placeholder="Name"' + (r.name && !r.name_sure ? ' class="check" title="Read from the handwriting. Please check it."' : "") + '></td>' +
@@ -428,12 +428,21 @@
     $("bulk-publish").disabled = !ready; $("bulk-csv").disabled = !bulk.length;
     $("bulk-publish").textContent = ready ? "Publish " + ready + " result" + (ready > 1 ? "s" : "") : "Publish results";
   }
+  $("bulk-table").addEventListener("click", function (ev) {
+    var a = ev.target.closest && ev.target.closest("a[data-view]"); if (!a) return;
+    ev.preventDefault();
+    var r = bulk[+a.dataset.view], url = URL.createObjectURL(new Blob([r.image], { type: "image/jpeg" }));
+    window.open(url, "_blank"); setTimeout(function () { URL.revokeObjectURL(url); }, 60000);
+  });
   $("bulk-table").addEventListener("change", function (ev) {
     var t = ev.target; if (!t.dataset || t.dataset.i == null) return;
     var r = bulk[+t.dataset.i];
     if (t.dataset.f === "set") { chooseSet(r, t.value); return; }
     if (t.dataset.f === "name") { r.name = t.value.trim().toUpperCase().slice(0, 80); r.name_sure = true; }
-    else r[t.dataset.f] = OMRCrypto.digits(t.value);
+    else {
+      r[t.dataset.f] = OMRCrypto.digits(t.value);
+      if (t.dataset.f === "register_number" && r.grading && /register/i.test(r.error || "")) r.error = null;   // fixed by hand
+    }
     renderBulk();
   });
   // The version code was not shaded: the admin looks at the sheet and picks the set.
@@ -572,7 +581,8 @@
           return !same;
         });
         S.index.push({ reg: r.register_number, booklet: r.booklet_serial, name: r.name || "", name_sure: r.name_sure !== false, subject: r.subject, subject_name: r.subject_name, exam_short: r.exam_short,
-          set: r.version, score: g.score, max: g.max_score, counts: g.counts, photo: r.file, sheet: sheet, sheet_key: sk, published: when });
+          set: r.version, score: g.score, max: g.max_score, counts: g.counts, photo: r.file, sheet: sheet, sheet_key: sk, published: when,
+          centre: r.centre || "", district: r.district || "", source: r.review_path ? "kea" : "upload" });
         done++; msg(msgId, "Saving sheet " + done + " of " + rows.length + "…");
       }
       for (var i = 0; i < rows.length; i++) await one(rows[i]);   // in order, so papers of one candidate merge correctly
@@ -930,6 +940,48 @@
       old = JSON.parse(old); old.stop = false; old.retry = (old.retry || 0) + 1;
       await commit({ "admin/kea-request.json": JSON.stringify(old, null, 1) + "\n" }, "Continue the KEA fetch: " + (old.kea_exam || ""));
       msg("kea-msg", "Continuing. GitHub carries on from the next centre in about a minute; the centres already done are kept.", "ok");
+    } catch (e) { console.error(e); msg("kea-msg", e.message, "bad"); }
+    finally { btn.disabled = false; }
+  });
+  $("kea-recheck").addEventListener("click", async function () {
+    var btn = this; btn.disabled = true;
+    try {
+      if (!(await online())) throw new Error("No internet connection. Check the connection and try again.");
+      await loadTree();
+      var old = await readFile(KEA_REQ);
+      if (!old) throw new Error("No fetch has been started yet.");
+      old = JSON.parse(old); old.stop = false; old.recheck = (old.recheck || 0) + 1;
+      await commit({ "admin/kea-request.json": JSON.stringify(old, null, 1) + "\n" }, "Read again the KEA centres with problems");
+      msg("kea-msg", "GitHub fetches the centres that had problems again in about a minute and reads them with the newest reader. Their good sheets are published again (that only replaces them). Press Refresh progress to follow it.", "ok");
+    } catch (e) { console.error(e); msg("kea-msg", e.message, "bad"); }
+    finally { btn.disabled = false; }
+  });
+  // Sheets the fetch could not publish come to the admin (encrypted) in admin/review/. Open
+  // them in the bulk table, leaving out the ones published since.
+  $("kea-review").addEventListener("click", async function () {
+    var btn = this; btn.disabled = true;
+    try {
+      await loadTree(); await loadIndex();
+      var paths = Object.keys(S.tree).filter(function (p) { return /^admin\/review\/[\w.-]+\.bin$/.test(p); }).sort();
+      if (!paths.length) { msg("kea-msg", "There are no fetched sheets waiting for a look.", "ok"); return; }
+      var rows = [];
+      for (var i = 0; i < paths.length; i++) {
+        msg("kea-msg", "Opening " + (i + 1) + " of " + paths.length + "…");
+        var data;
+        try { data = await OMRCrypto.openForAdmin(S.priv, new TextDecoder().decode(await getBlob(S.tree[paths[i]]))); }
+        catch (e) { console.error("review", paths[i], e); continue; }
+        (data.rows || []).forEach(function (r) {
+          var done = r.register_number && S.index.some(function (e) { return e.reg === r.register_number && e.subject === r.subject; });
+          if (done) return;
+          if (r.image_b64) { r.image = OMRCrypto.unb64(r.image_b64); delete r.image_b64; }
+          r.review_path = paths[i]; rows.push(r);
+        });
+      }
+      if (!rows.length) { msg("kea-msg", "All the fetched sheets that needed a look have been published.", "ok"); return; }
+      bulk = rows; bulkFiles = []; bulkPos = 0; renderBulk(); openTab("tab-bulk");
+      $("bulk-status").textContent = rows.length + " fetched sheet" + (rows.length > 1 ? "s" : "") + " need a look. Open a sheet with its link, choose the set or correct the numbers, then press Publish.";
+      msg("kea-msg", "Opened " + rows.length + " sheets in the Bulk OMR upload tab.", "ok");
+      $("bulk-table").scrollIntoView({ behavior: "smooth" });
     } catch (e) { console.error(e); msg("kea-msg", e.message, "bad"); }
     finally { btn.disabled = false; }
   });
