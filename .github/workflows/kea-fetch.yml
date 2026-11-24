@@ -7,7 +7,8 @@ name: Fetch OMR sheets from KEA
 on:
   push:
     branches: [main]
-    paths: [admin/kea-request.json]
+    # a new request, or a better sheet reader (centres with problems are then read again by themselves)
+    paths: [admin/kea-request.json, "omr/**", tools/kea_fetch.py]
   schedule:
     - cron: "23 */3 * * *"
   workflow_dispatch:

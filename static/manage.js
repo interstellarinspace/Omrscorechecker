@@ -985,6 +985,20 @@
     } catch (e) { console.error(e); msg("kea-msg", e.message, "bad"); }
     finally { btn.disabled = false; }
   });
+  // Sheets the fetch could not publish, by centre. They wait in "Fix the sheets that need a look";
+  // a centre is read again by itself whenever the reader is improved, and its old problems go.
+  function keaProblems(st, fails) {
+    var when = function (t) { return t ? new Date(t).toLocaleString([], { day: "numeric", month: "short", hour: "2-digit", minute: "2-digit" }) : "an earlier run"; };
+    var centres = Object.keys(st.done || {}).map(function (k) { return st.done[k]; }).filter(function (d) { return d.failed; });
+    if (!centres.length && !fails.length) return "";
+    var newest = function (d) { return d.reader && d.reader === st.reader; };
+    return "<p><b>Sheets that need a look</b> (press <i>Fix the sheets that need a look</i> to check and publish them)</p><ul>" +
+      centres.map(function (d) {
+        return "<li>" + esc((d.district || "") + " centre " + (d.code || d.centre || "")) + ": " + d.failed + " of " + d.sheets + " sheets, read " + esc(when(d.read)) +
+          (newest(d) ? " with the newest reader" : " with an older reader, so they will be read again by themselves") + "</li>";
+      }).join("") + "</ul>" +
+      (fails.length ? "<details><summary>What was wrong on each sheet (" + (st.failures || []).length + ")</summary><ul>" + fails.map(function (f) { return "<li>" + esc(f) + "</li>"; }).join("") + "</ul></details>" : "");
+  }
   $("kea-refresh").addEventListener("click", async function () {
     var btn = this; btn.disabled = true; $("kea-status").innerHTML = "<p class='muted'>Loading…</p>";
     try {
@@ -997,12 +1011,12 @@
       var t = st.totals || {}, label = { running: "Running", paused: "Paused, carries on in the next run", blocked: "KEA is limiting requests, will try again later",
         captcha: "Stopped: KEA asked for a captcha", done: "Finished", stopped: "Stopped", error: "Stopped with a problem" }[st.status] || st.status;
       if (req.stop) label += " (stop requested)";
-      var fails = (st.failures || []).slice(-15).reverse();
+      var fails = (st.failures || []).slice(-40).reverse();
       $("kea-status").innerHTML = "<p><b>" + esc(label) + "</b><br>" + esc(st.message || "") + "</p>" +
         '<div class="facts" style="justify-content:flex-start"><span>Exam <b>' + esc(st.kea_exam_name || req.kea_exam || "") + "</b></span><span>Centres done <b>" + (t.centres || 0) +
         "</b></span><span>Sheets published <b>" + (t.published || 0) + "</b></span><span>Could not read <b>" + (t.failed || 0) + "</b></span><span>Updated <b>" + esc((st.updated || "").replace("T", " ").replace("Z", " UTC")) + "</b></span></div>" +
         (added ? "<p class='ok'>Added " + added + " new sheets to Search by register no. and the Merit list.</p>" : "") +
-        (fails.length ? "<details><summary>Latest problems (" + (st.failures || []).length + ")</summary><ul>" + fails.map(function (f) { return "<li>" + esc(f) + "</li>"; }).join("") + "</ul></details>" : "");
+        keaProblems(st, fails);
     } catch (e) { console.error(e); $("kea-status").innerHTML = "<p class='bad'>" + esc(e.message) + "</p>"; }
     finally { btn.disabled = false; }
   });

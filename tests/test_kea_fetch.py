@@ -129,7 +129,7 @@ class Args:
     delay, max_minutes, no_push, check = 0.0, 30, True, False
 
 
-def run_case(captcha_at=None):
+def run_case(captcha_at=None, newer_reader=False):
     global PDF
     tmp = tempfile.mkdtemp()
     PDF = os.path.join(tmp, "centre.pdf")
@@ -147,6 +147,18 @@ def run_case(captcha_at=None):
     os.environ["RUNNER_TEMP"] = tmp
     os.chdir(tmp)
     KF.run(Args())
+    if newer_reader:   # the reader is improved after the fetch finished
+        st = json.load(open(os.path.join(tmp, KF.STATE)))
+        old, KF.reader_version = KF.reader_version, lambda: "newer"
+        try:
+            assert KF.pending(json.load(open(os.path.join(tmp, KF.REQUEST))), st)
+            HITS["pdf"] = 1   # (the first download is refused once on purpose; not again)
+            KF.run(Args())
+            assert HITS["pdf"] == 6, HITS          # each of the 5 centres had a problem page: read again once
+            st = json.load(open(os.path.join(tmp, KF.STATE)))
+            assert not KF.pending(json.load(open(os.path.join(tmp, KF.REQUEST))), st)   # once per reader
+        finally:
+            KF.reader_version = old
     srv.shutdown()
     return tmp, key
 
@@ -178,6 +190,14 @@ def test_full_fetch():
     assert not KF.pending(json.load(open(os.path.join(tmp, KF.REQUEST))), st)
 
 
+def test_newer_reader_reads_problem_centres_again():
+    tmp, _ = run_case(newer_reader=True)
+    st = json.load(open(os.path.join(tmp, KF.STATE)))
+    assert st["status"] == "done" and st["reader"] == "newer", st
+    assert st["totals"]["centres"] == 5 and st["totals"]["published"] == 10 and st["totals"]["failed"] == 5, st["totals"]
+    assert len([f for f in st["failures"] if " page " in f]) == 5, st["failures"]   # no doubles
+
+
 def test_captcha_stops():
     tmp, _ = run_case(captcha_at=3)
     st = json.load(open(os.path.join(tmp, KF.STATE)))
@@ -188,5 +208,6 @@ def test_captcha_stops():
 
 if __name__ == "__main__":
     test_full_fetch()
+    test_newer_reader_reads_problem_centres_again()
     test_captcha_stops()
     print("ok")

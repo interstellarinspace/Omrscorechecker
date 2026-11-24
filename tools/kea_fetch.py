@@ -361,9 +361,17 @@ def review_row(r, subj, exam, sid, code, cname, dname, pno):
     return out
 
 
+def review_path(label):
+    return "admin/review/" + re.sub(r"[^\w.-]+", "-", label)[:80] + ".bin"
+
+
+def drop_review(label):
+    if os.path.exists(rel(review_path(label))):
+        os.remove(rel(review_path(label)))
+
+
 def save_review(review, admin_pub, label):
-    safe = re.sub(r"[^\w.-]+", "-", label)[:80]
-    path = f"admin/review/{safe}.bin"
+    path = review_path(label)
     os.makedirs(rel("admin/review"), exist_ok=True)
     with open(rel(path), "w", encoding="utf-8") as f:
         f.write(seal_for_admin(admin_pub, {"v": 1, "label": label, "rows": review}))
@@ -474,9 +482,54 @@ def stop_requested(req_id):
     return bool(latest) and (latest.get("stop") or latest.get("id") != req_id)
 
 
+CODE = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+
+def reader_version():
+    """A short fingerprint of the sheet reader (omr/ and this file). It changes with every update."""
+    h = hashlib.sha1()
+    files = [os.path.join("tools", "kea_fetch.py")]
+    for d, _, names in os.walk(os.path.join(CODE, "omr")):
+        files += [os.path.relpath(os.path.join(d, n), CODE) for n in names if n.endswith((".py", ".txt", ".json"))]
+    for f in sorted(files):
+        h.update(f.encode())
+        with open(os.path.join(CODE, f), "rb") as fh:
+            h.update(fh.read())
+    return h.hexdigest()[:10]
+
+
+def stale(state, rv):
+    """Centres whose sheets with problems were read by an older reader: they are read again."""
+    return [k for k, d in (state or {}).get("done", {}).items() if d.get("failed") and d.get("reader") != rv]
+
+
+def reread(state, keys):
+    """Take these centres off the done list (and their problems off the list) so they are read again."""
+    t = state["totals"]
+    for key in keys:
+        d = state["done"].pop(key)
+        t["centres"] -= 1; t["sheets"] -= d.get("sheets", 0); t["published"] -= d.get("published", 0); t["failed"] -= d.get("failed", 0)
+        parts = key.split("|")
+        if len(parts) == 4:
+            tag = f"{parts[1]} centre {parts[3]} page"
+            state["failures"] = [f for f in state["failures"] if not f.startswith(tag)]
+
+
+def reader_changed():
+    """True when a newer reader has been pushed to GitHub since this run started."""
+    if not hasattr(reader_changed, "start"):
+        reader_changed.start = [git("rev-parse", "HEAD:" + p, check=False).stdout.strip() for p in ("omr", "tools/kea_fetch.py")]
+    if git("fetch", "-q", "origin", os.environ.get("GITHUB_REF_NAME", "main"), check=False).returncode:
+        return False
+    now_ = [git("rev-parse", "FETCH_HEAD:" + p, check=False).stdout.strip() for p in ("omr", "tools/kea_fetch.py")]
+    return all(reader_changed.start) and all(now_) and now_ != reader_changed.start
+
+
 def pending(req, state):
     if not req or req.get("stop"):
         return False
+    if state and state.get("request") == req.get("id") and state.get("status") != "captcha" and stale(state, reader_version()):
+        return True   # the reader was improved: read the centres with problems again
     if state and state.get("request") == req.get("id") and req.get("recheck", 0) > state.get("recheck", 0):
         return True
     if state and state.get("request") == req.get("id") and state.get("status") == "captcha":
@@ -493,21 +546,16 @@ def run(args):
         return 0
     if state.get("request") != req.get("id"):
         state = {"request": req["id"], "done": {}, "failures": [], "totals": {"centres": 0, "sheets": 0, "published": 0, "failed": 0}}
+    rv = reader_version()
+    # Read again the centres that had sheets with problems: always when the admin asks, and by
+    # itself once for every new reader. Their good sheets are published again too, which simply
+    # replaces them, and the problems from the older reading leave the list.
     if req.get("recheck", 0) > state.get("recheck", 0):
-        # Read again the centres that had sheets with problems (with the newest reader). Their
-        # good sheets are published again too, which simply replaces them.
-        t = state["totals"]
-        for key, d in list(state["done"].items()):
-            if d.get("failed"):
-                del state["done"][key]
-                t["centres"] -= 1; t["sheets"] -= d.get("sheets", 0); t["published"] -= d.get("published", 0); t["failed"] -= d["failed"]
-                parts = key.split("|")
-                if len(parts) == 4:
-                    tag = f"{parts[1]} centre {parts[3]} page"
-                    state["failures"] = [f for f in state["failures"] if not f.startswith(tag)]
+        reread(state, [k for k, d in state["done"].items() if d.get("failed")])
         state["recheck"] = req["recheck"]
-        if state.get("status") == "done":
-            state["status"] = "running"
+    elif state.get("status") != "captcha":
+        reread(state, stale(state, rv))
+    state["reader"] = rv
     state.update(status="running", message="Fetching…", started=state.get("started") or now(), updated=now(),
                  retry=req.get("retry", 0))
 
@@ -598,6 +646,9 @@ def run(args):
                         if not args.no_push and stop_requested(req["id"]):
                             stop("stopped", "Stopped by the admin. Press Start fetching to carry on.")
                             return 0
+                        if not args.no_push and reader_changed():
+                            stop("paused", "The sheet reader was just improved. The fetch carries on with it in a minute or two.")
+                            return 0
                         if time.time() > deadline:
                             stop("paused", "Paused to stay within GitHub's time limit. It carries on automatically in the next run.")
                             return 0
@@ -638,9 +689,13 @@ def run(args):
                                     review.append(review_row(r, subj, exam, sid, code, cname, dname, pno))
                         if rows:
                             publish(rows, cfg, vault["pub"], f"{exam.get('short', '')} {subj['name']} centre {code}")
+                        label = f"{exam['id']}-{sid}-{dname}-{code}"
                         if review:   # the sheets that need a look go to the admin, who can fix and publish them
-                            save_review(review, vault["pub"], f"{exam['id']}-{sid}-{dname}-{code}")
-                        state["done"][key] = {"sheets": len(rows) + failed, "published": len(rows), "failed": failed, "centre": cname[:80]}
+                            save_review(review, vault["pub"], label)
+                        else:        # an earlier reading's sheets that needed a look are all fine now
+                            drop_review(label)
+                        state["done"][key] = {"sheets": len(rows) + failed, "published": len(rows), "failed": failed, "centre": cname[:80],
+                                              "district": dname, "code": code, "reader": rv, "read": now()}
                         t = state["totals"]
                         t["centres"] += 1; t["sheets"] += len(rows) + failed; t["published"] += len(rows); t["failed"] += failed
                         state["failures"] = state["failures"][-300:]

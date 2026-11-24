@@ -147,6 +147,12 @@ Each marked OMR sheet is stored once in `published/sheets/`, encrypted with its 
 - A bulk scan that stops (connection lost, scanner problem) keeps the sheets already read; press
   Continue to carry on. A KEA fetch keeps the centres already done; "Continue from where it
   stopped" carries on the same fetch, "Start a new fetch" begins again.
+- Every centre the fetch reads records the reader's fingerprint (`reader_version`: omr/ and
+  tools/kea_fetch.py). Pushing a changed reader starts the fetch workflow; centres with problem
+  sheets from an older reader are read again by themselves (once per reader), their old
+  problems leave the list, and a run in progress stops before its next centre so the new run
+  carries on with the new reader. Sheets that still cannot be read wait in admin/review/ for
+  "Fix the sheets that need a look".
 
 ## Exams, papers and subjects
 
