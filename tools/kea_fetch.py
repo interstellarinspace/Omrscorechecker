@@ -444,6 +444,10 @@ def run(args):
         state.update(status="error", message=f"Exam {req.get('exam')} is not on this website.")
         write_json(STATE, state); save("KEA fetch: unknown exam", push=not args.no_push)
         return 1
+    if exam.get("omr_layout", "kea_kreis") != "kea_kreis":
+        state.update(status="error", message=f"Photo reading is off for {exam['name']}. In the admin page, Exams & subjects, press Turn on next to {exam['name']} (if it uses the KEA OMR sheet), then start the fetch again.")
+        write_json(STATE, state); save("KEA fetch: photo reading off", push=not args.no_push)
+        return 1
     want_districts = {d.strip().upper() for d in req.get("districts", []) if d.strip()}
     overrides = req.get("subjects") or {}
     deadline = time.time() + args.max_minutes * 60
@@ -480,6 +484,14 @@ def run(args):
                         state["failures"].append(note)
                     continue
                 subj, _ = K.find_subject(cfg, sid)
+                sc = K.subject_config(cfg, sid)
+                missing = [c for c in sc["set_codes"] if K.load_key(sid, c, sc) is None]
+                if missing:  # leave these centres for a later run, once the key is added
+                    note = f"Waiting for the {subj['name']} answer key (sets {', '.join(missing)}). Add it, and the next run fetches this subject."
+                    if note not in state["failures"]:
+                        state["failures"].append(note)
+                    state["waiting_for_keys"] = True
+                    continue
                 fields = {"ddlExam": kea_exam, "ddlDistrict": dval, "ddlSubject": sval}
                 site.choose("ddlSubject", fields)
                 pages = [1] + grid_pages(site.page)
@@ -525,6 +537,9 @@ def run(args):
                         state["updated"] = now()
                         write_json(STATE, state)
                         save(f"KEA fetch: {dname} {sname.strip()} centre {code} ({len(rows)} published)", push=not args.no_push)
+        if state.pop("waiting_for_keys", False):
+            stop("paused", "Fetched everything that has an answer key. Some subjects are waiting for their key (see the problems list). Add the key and press Start fetching again.")
+            return 0
         stop("done", f"Finished. {state['totals']['published']} sheets published from {state['totals']['centres']} centres.")
         return 0
     except CaptchaSeen:
