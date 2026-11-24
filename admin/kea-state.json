@@ -11,10 +11,10 @@
   "published": 0,
   "failed": 0
  },
- "status": "paused",
- "message": "Fetched everything that has an answer key. Some subjects are waiting for their key (see the problems list). Add the key and press Start fetching again.",
+ "status": "running",
+ "message": "Fetching…",
  "started": "2026-11-24T09:07:58Z",
- "updated": "2026-11-24T09:11:04Z",
+ "updated": "2026-11-24T09:24:58Z",
  "kea_exam_name": "PRISON DEPARTMENT RECRUITMENT (RPC)-2026 and COMPULSORY KANNADA EXAMINATION -2026 (21/11/2026)",
  "districts": [
   "RAICHUR",
