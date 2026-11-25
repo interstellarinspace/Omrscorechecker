@@ -561,11 +561,11 @@
   "published": 427,
   "failed": 45
  },
- "reader": "a54816d9ad",
- "status": "done",
- "message": "Finished. 427 sheets published from 2 centres.",
+ "reader": "df4ad457fe",
+ "status": "running",
+ "message": "Fetching…",
  "started": "2026-11-24T12:16:32Z",
- "updated": "2026-11-24T17:22:25Z",
+ "updated": "2026-11-25T04:53:09Z",
  "retry": 0,
  "kea_exam_name": "PRISON DEPARTMENT RECRUITMENT (RPC)-2026 and COMPULSORY KANNADA EXAMINATION -2026 (21/11/2026)",
  "districts": [
@@ -577,5 +577,8 @@
   "DHARWAD",
   "BALLARI"
  ],
- "redo": []
+ "redo": [
+  "PDP26|BELAGAVI|General Knowledge Paper (RPC)|133",
+  "PDP26|RAICHUR|General Knowledge Paper (RPC)|232"
+ ]
 }
