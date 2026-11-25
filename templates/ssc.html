@@ -1,0 +1,116 @@
+{% extends "base.html" %}
+{% set description = "SSC marks calculator: paste your SSC response sheet link (ssc.digialm.com) or upload the response sheet PDF, and see your marks section by section with SSC's marking and negative marking. Free, and it all runs in your browser." %}
+{% set og_title = "SSC marks calculator from your response sheet" %}
+{% block title %}SSC Marks Calculator from Response Sheet (CGL, CHSL, MTS, GD, CPO) | {{ cfg.site_name }}{% endblock %}
+{% block meta %}{% include "seo_head.html" %}{% endblock %}
+{% block body %}
+<style>
+  .ssc-hero { background:linear-gradient(120deg,#10b981 0%,#0ea5e9 35%,#7c3aed 70%,#db2777 100%); }
+  .or { display:flex; align-items:center; gap:10px; color:var(--muted); font-weight:700; margin:18px 0 4px; }
+  .or::before, .or::after { content:""; flex:1; height:1px; background:var(--line); }
+  .how { background:#f0f9ff; border-radius:12px; padding:10px 14px; margin-top:12px; font-size:.92rem; }
+  .how ol { margin:6px 0 0; padding-left:20px; }
+  .how b { color:#0369a1; }
+  .bm { display:inline-block; background:var(--grad); color:#fff !important; text-decoration:none; font-weight:700; padding:8px 14px; border-radius:999px; cursor:grab; }
+  table.sec input[type=number] { width:76px; padding:6px 8px; font-size:15px; }
+  table.sec td, table.sec th { vertical-align:middle; }
+  table.sec tfoot td { font-weight:800; border-top:2px solid var(--line); }
+  .sec-name { font-weight:600; }
+  .q-ok { color:var(--ok); font-weight:700; } .q-bad { color:var(--bad); font-weight:700; } .q-na { color:var(--muted); } .q-bonus { color:var(--info); font-weight:700; }
+  .info-grid { display:grid; grid-template-columns:auto 1fr; gap:2px 12px; font-size:.92rem; margin-top:8px; text-align:left; }
+  .info-grid span:nth-child(odd) { color:var(--muted); }
+  .stats.s4 { grid-template-columns:repeat(4,1fr); }
+  .tools { display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-top:12px; }
+  .tools .btn + .btn { margin-top:0; }
+  @media (max-width:480px) { .c-qs { display:none; } #ssc-sec td, #ssc-sec th { padding:6px 4px; } }
+  @media (max-width:420px) { .stats.s4 { grid-template-columns:repeat(2,1fr); } }
+  @media print {
+    #ssc-intro, #ssc-input, #ssc-scheme, .tools, #ssc-again { display:none !important; }
+    #ssc-qs table { font-size:11px; }
+  }
+</style>
+<div id="ssc-intro">
+<div class="hero ssc-hero">
+  <h1>SSC marks calculator</h1>
+  <p>Paste your response sheet link or upload the response sheet PDF. You'll see your marks for every section, worked out with SSC's marking scheme. Nothing is uploaded: it is all worked out on your own phone or computer.</p>
+  <div class="chips"><span>CGL</span><span>CHSL</span><span>MTS</span><span>GD</span><span>CPO</span><span>Steno</span><span>Selection Post</span><span>Free</span></div>
+</div>
+</div>
+
+<div class="card" id="ssc-input">
+  <h2>1. Your response sheet</h2>
+  <label for="ssc-url">Response sheet link</label>
+  <input type="text" id="ssc-url" inputmode="url" autocomplete="off" placeholder="https://ssc.digialm.com/…/….html">
+  <button class="btn" type="button" id="ssc-fetch" style="margin-top:12px">Calculate my marks</button>
+  <div class="or">or</div>
+  <label class="pick small" for="ssc-file"><span class="cam">📄</span><span id="ssc-file-label">Upload the response sheet PDF or saved page</span>
+    <span class="muted small">PDF, or the page saved from your browser (.html / .mhtml)</span></label>
+  <input type="file" id="ssc-file" accept=".pdf,.html,.htm,.mhtml,.mht,application/pdf,text/html,multipart/related">
+  <div class="busy" id="ssc-busy" hidden>Reading your response sheet…</div>
+  <div class="err" id="ssc-err" hidden style="margin:12px 0 0"></div>
+  <details class="how" id="ssc-how">
+    <summary>The link didn't work? Save the page and upload it</summary>
+    <p style="margin:8px 0 0">The SSC response sheet site does not let other websites read the page straight from the link, so if the link doesn't work, save the page and upload it here. It takes a few seconds:</p>
+    <ol>
+      <li><b>Android (Chrome):</b> open your link, tap ⋮ › Share › Print › Save as PDF, then upload that PDF here.</li>
+      <li><b>iPhone (Safari):</b> open your link, tap Share › Print, pinch out on the preview, tap Share › Save to Files, then upload it here.</li>
+      <li><b>Computer:</b> open your link, press Ctrl+P (⌘P on Mac) › Save as PDF, or Ctrl+S to save the page, then upload the file here.</li>
+    </ol>
+    <p style="margin:10px 0 4px"><b>On a computer, one click:</b> drag this button to your bookmarks bar, open your response sheet, then click the bookmark. Your sheet opens here with the marks.</p>
+    <a class="bm" id="ssc-bm" href="#" title="Drag me to your bookmarks bar">SSC marks</a>
+  </details>
+</div>
+
+<div class="card" id="ssc-scheme" hidden>
+  <h2>2. Marking scheme</h2>
+  <label for="ssc-exam">Exam</label>
+  <select id="ssc-exam"></select>
+  <p class="muted small" id="ssc-detected"></p>
+  <div class="grid2">
+    <div><label for="ssc-all-right">Marks for a correct answer</label><input type="number" id="ssc-all-right" step="0.01" min="0"></div>
+    <div><label for="ssc-all-wrong">Marks taken off for a wrong answer</label><input type="number" id="ssc-all-wrong" step="0.01" min="0"></div>
+  </div>
+  <p class="muted small">These set every section. You can change the marks of each section below, and untick a section that is only qualifying.</p>
+  <div class="scroll"><table class="sec" id="ssc-sec-edit"></table></div>
+  <label class="check" style="margin-top:14px"><input type="checkbox" id="ssc-bonus"><span>Give full marks for questions that show no correct answer (questions SSC dropped)</span></label>
+</div>
+
+<div id="ssc-result" hidden>
+  <div class="card result-head">
+    <div class="who" id="ssc-who">Your marks</div>
+    <div class="muted" id="ssc-sub"></div>
+    <div class="ring" id="ssc-ring"><b id="ssc-score">0</b><small id="ssc-max">out of 0</small></div>
+    <div class="stats s4" id="ssc-stats"></div>
+    <p class="muted small" id="ssc-marking" style="margin:12px 0 0"></p>
+    <div class="info-grid" id="ssc-info"></div>
+    <div class="tools">
+      <button class="btn" type="button" id="ssc-pdf">Download PDF</button>
+      <button class="btn secondary" type="button" id="ssc-print">Print</button>
+    </div>
+    <p class="note" id="ssc-note" hidden></p>
+  </div>
+  <div class="card">
+    <h2>Section by section</h2>
+    <div class="scroll"><table id="ssc-sec"></table></div>
+  </div>
+  <div class="card">
+    <details id="ssc-qs"><summary>Every question</summary>
+      <div class="scroll"><table id="ssc-qtable"></table></div>
+    </details>
+  </div>
+  <p class="muted small">This is an unofficial estimate from your response sheet and the answers it shows. SSC's final answer key, normalisation and results are what count.</p>
+  <button class="btn secondary" type="button" id="ssc-again">Check another response sheet</button>
+</div>
+
+<div class="card faq">
+  <h2>Questions</h2>
+  <h3>Which exams does this work for?</h3>
+  <p>Any SSC exam whose response sheet comes from the TCS site (ssc.digialm.com): CGL, CHSL, MTS and Havaldar, GD Constable, CPO, JE, Stenographer, Selection Post and others. Pick your exam and the marks are set for you, or type your own.</p>
+  <h3>Is my response sheet sent anywhere?</h3>
+  <p>No. The page reads your response sheet inside your browser and works out the marks there. Nothing is saved or uploaded.</p>
+  <h3>Why are my marks different from the official result?</h3>
+  <p>SSC may change the answer key, drop questions, and normalise marks across shifts. This page uses the answers shown in your response sheet, so it is an estimate.</p>
+</div>
+<script src="{{ asset('pdf-pages.js') }}"></script>
+<script src="{{ asset('ssc.js') }}"></script>
+{% endblock %}
