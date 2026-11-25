@@ -19,7 +19,7 @@
       {"@type": "Question", "name": "What is the marking scheme?",
        "acceptedAnswer": {"@type": "Answer", "text": "1 mark for each correct answer. Option 5 (not attempted) gets 0. 0.25 marks are deducted for each wrong answer, for a question with no bubble shaded, and for a question with more than one bubble shaded."}},
       {"@type": "Question", "name": "Which answer key is used?",
-       "acceptedAnswer": {"@type": "Answer", "text": "The provisional answer keys published by the Karnataka Examinations Authority on 22.11.2026 for Paper I General Knowledge and Paper II Kannada and Science, versions A1, B1, C1 and D1."}},
+       "acceptedAnswer": {"@type": "Answer", "text": "The provisional answer keys published by the exam authority for each paper and version (A1, B1, C1 and D1). You can also use any answer key of your own."}},
       {"@type": "Question", "name": "Is my photo kept private?",
        "acceptedAnswer": {"@type": "Answer", "text": "{% if static_site %}On this site your photo is checked inside your own browser and is never uploaded anywhere.{% else %}Your photo is used only to calculate your score and is seen only by the site administrator. It is never sold or shared.{% endif %}"}}
     ]}
@@ -52,7 +52,7 @@
   <label for="name">Your name</label>
   <input type="text" id="name" name="name" autocomplete="name" placeholder="Optional">
   <label>Photo or PDF of your answer sheet</label>
-  <label class="pick" for="sheet" id="pick"><span class="cam" aria-hidden="true">📷</span>Tap to take a photo, or choose a photo or the OMR PDF from KEA</label>
+  <label class="pick" for="sheet" id="pick"><span class="cam" aria-hidden="true">📷</span>Tap to take a photo, or choose a photo or PDF of your OMR sheet</label>
   <input type="file" id="sheet" name="sheet" accept="image/*{% if static_site %},.pdf,application/pdf{% endif %}" required>
   <ul class="tips">
     <li>Lay the sheet flat in good light, without shadows across it.</li>
@@ -84,7 +84,7 @@
   <h3>What is the marking scheme?</h3>
   <p>1 mark for each correct answer. Option 5 (not attempted) gets 0. 0.25 marks are deducted for each wrong answer, for a question with no bubble shaded, and for a question with more than one bubble shaded.</p>
   <h3>Which answer key is used?</h3>
-  <p>The provisional answer keys published by the Karnataka Examinations Authority on 22.11.2026 for Paper I General Knowledge and Paper II Kannada and Science. The final keys and official results announced by KEA are what count.</p>
+  <p>The provisional answer keys published by the exam authority for each paper. The final keys and official results announced by the exam authority are what count. You can also check your marks with any answer key of your own.</p>
   <h3>Is my photo kept private?</h3>
   <p>{% if static_site %}On this site your photo is checked inside your own browser and is never uploaded anywhere.{% else %}Your photo is used only to calculate your score and is seen only by the site administrator. It is never sold or shared.{% endif %} See the <a href="{{ url_for('privacy') }}">privacy policy</a>.</p>
 </section>

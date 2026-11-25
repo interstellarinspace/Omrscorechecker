@@ -164,8 +164,8 @@
     ctx.fillStyle = "#3730a3"; ctx.font = "600 30px system-ui, sans-serif";
     ctx.fillText("Set " + (r.version || "?") + "   ·   Register " + (full ? r.register_number : mask(r.register_number)) + "   ·   Booklet " + (r.booklet_serial || ""), W / 2, 1030);
     ctx.fillStyle = "#5f6787"; ctx.font = "500 26px system-ui, sans-serif";
-    ctx.fillText("Checked on " + today() + " against " + (r.own_key ? "your own answer key" : "the KEA provisional answer key"), W / 2, 1082);
-    ctx.fillText("Unofficial estimate. KEA's final key and results are what count.", W / 2, 1122);
+    ctx.fillText("Checked on " + today() + " against " + (r.own_key ? "your own answer key" : "the provisional answer key"), W / 2, 1082);
+    ctx.fillText("Unofficial estimate. The final key and official results are what count.", W / 2, 1122);
     ctx.fillStyle = "#fff"; ctx.font = "700 34px system-ui, sans-serif"; ctx.fillText("Check your score free", W / 2, 1250);
     ctx.font = "500 28px system-ui, sans-serif"; ctx.globalAlpha = 0.95; ctx.fillText((SITE.url || location.origin).replace(/^https?:\/\//, ""), W / 2, 1296); ctx.globalAlpha = 1;
     return cv;
@@ -207,7 +207,7 @@
       doc.setFont("helvetica", "normal"); doc.setFontSize(10); doc.setTextColor(60, 64, 90);
       var lines = doc.splitTextToSize(current.own_key ? (current.marking_note || "") + " Worked out with your own answer key and marking scheme. This is an unofficial estimate." : "Marking: +" + fmt(m.correct) + " for a correct answer, " + fmt(m.wrong) + " for a wrong answer, " + fmt(m.skipped) +
         " for option " + (current.five || "5") + " (not attempted), " + fmt(m.blank) + " for no bubble shaded, " + fmt(m.multiple) + " for more than one bubble shaded. " +
-        "This is an unofficial estimate based on the KEA provisional answer key; the final key and results announced by KEA are what count.", 150);
+        "This is an unofficial estimate based on the provisional answer key; the final key and official results are what count.", 150);
       doc.text(lines, 30, y);
       var qs = (current.grading.questions || []).filter(function (q) { return q.result !== "no_key"; });
       if (qs.length) {

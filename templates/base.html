@@ -210,7 +210,7 @@
 })();
 </script>{% endif %}
 <footer class="foot muted">
-  <p>OMR Score Check is an independent tool. It is not run by or affiliated with KEA, KPSC or any exam authority.
+  <p>OMR Score Check is an independent tool. It is not run by or affiliated with any exam authority.
   Answer keys are the provisional keys published by the exam authority; the final keys and results they announce are what count.</p>
   <p><a href="{{ url_for('index') }}">Check your score</a> ·
   {% for e in exams %}<a href="{{ url_for('exam_page', exam_id=e.id) }}">{{ e.name }} answer keys</a> · {% endfor %}

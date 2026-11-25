@@ -28,7 +28,7 @@
   var timer = null;
   async function parseKey() {
     var text = $("own-key").value;
-    if (!text.trim()) { parsed = null; $("own-keyinfo").className = "muted small"; $("own-keyinfo").textContent = "Upload the answer key as a photo or PDF of the key table (one column per set, like KEA's key)."; sets(); summary(); return; }
+    if (!text.trim()) { parsed = null; $("own-keyinfo").className = "muted small"; $("own-keyinfo").textContent = "Upload the answer key as a photo or PDF of the key table (question number, then one column per set)."; sets(); summary(); return; }
     if (!E.isLoaded()) $("own-keyinfo").textContent = "Getting the calculator ready (first time only)…";
     var r = await E.call("omr_custom_key", text, nq());
     var info = $("own-keyinfo");
@@ -92,7 +92,7 @@
   }
 
   // ---------- marking ----------
-  var PRESETS = { kea: [-0.25, -0.25, -0.25], third: [-1 / 3, 0, 0], none: [0, 0, 0] };
+  var PRESETS = { quarter: [-0.25, -0.25, -0.25], third: [-1 / 3, 0, 0], none: [0, 0, 0] };
   $("own-presets").addEventListener("click", function (ev) {
     var b = ev.target.closest("button"); if (!b) return;
     var p = PRESETS[b.dataset.p], c = num("own-correct", 1);
