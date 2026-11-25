@@ -190,11 +190,8 @@
     <a class="brand" href="{{ url_for('index') }}"><img src="{{ url_for('static', filename='icon-192.png') }}" alt="">OMR Score Check</a>
   </div>
   <nav class="tabs">
-    <a href="{{ url_for('index') }}"{% if request.endpoint == 'index' %} class="on"{% endif %}>Check score</a>
-    {% for e in exams %}<a href="{{ url_for('exam_page', exam_id=e.id) }}"{% if (exam is defined and exam and exam.id == e.id) %} class="on"{% endif %}>{{ e.name }}</a>{% endfor %}
-    <a href="{{ url_for('my_key') }}"{% if request.endpoint == 'my_key' %} class="on"{% endif %}>Your own key</a>
+    <a href="{{ url_for('index') }}"{% if request.endpoint in ('index', 'my_key') %} class="on"{% endif %}>OMR Scanner</a>
     <a href="{{ url_for('ssc') }}"{% if request.endpoint == 'ssc' %} class="on"{% endif %}>SSC marks</a>
-    <span class="sep"></span><a href="{{ url_for('results_page') }}"{% if request.endpoint == 'results_page' %} class="on"{% endif %}>Search by Register No. &amp; Exam</a>
   </nav>
 </header>
 {% block quotes %}<aside class="quote-wrap" aria-label="Motivational quote"><div class="quote" id="quote" aria-live="polite"><span class="q-text"></span><span class="q-who"></span></div></aside>
@@ -212,11 +209,9 @@
 </script>{% endif %}
 <footer class="foot muted">
   <p>OMR Score Check is an independent tool. It is not run by or affiliated with any exam authority.
-  Answer keys are the provisional keys published by the exam authority; the final keys and results they announce are what count.</p>
-  <p><a href="{{ url_for('index') }}">Check your score</a> ·
-  {% for e in exams %}<a href="{{ url_for('exam_page', exam_id=e.id) }}">{{ e.name }} answer keys</a> · {% endfor %}
+  Marks are worked out from the answer key you upload; the final keys and results announced by the exam authority are what count.</p>
+  <p><a href="{{ url_for('index') }}">OMR Scanner</a> ·
   <a href="{{ url_for('ssc') }}">SSC marks calculator</a> ·
-  <a href="{{ url_for('results_page') }}">Search by register number and exam</a> ·
   <a href="{{ url_for('privacy') }}">Privacy</a></p>
 </footer>
 <script>

@@ -127,8 +127,8 @@ def _log(out, image_bytes):
 @app.route("/", methods=["GET", "POST"])
 def index():
     c = cfg()
-    if request.method == "GET":
-        return render_template("index.html", cfg=c)
+    if request.method == "GET":   # the home page is the OMR scanner with the student's own answer key
+        return render_template("my_key.html", cfg=c)
     subject = request.form.get("subject", "")
     if subject not in [s["id"] for s in c["subjects"]]:
         return render_template("index.html", cfg=c, error="Please choose your subject.")
@@ -240,11 +240,8 @@ def robots():
 
 @app.route("/sitemap.xml")
 def sitemap():
-    c = cfg()
     base = SITE_URL or request.url_root.rstrip("/")
-    slug = {e["id"]: e["slug"] for e in c.get("exams", [])}
-    paths = (["/", "/my-key", "/ssc", "/results"] + [f"/exams/{e['id']}" for e in c.get("exams", [])]
-             + [f"/{slug.get(s.get('exam'), 'kreis-2026')}/{s['slug']}" for s in c["subjects"] if has_keys(c, s)] + ["/privacy"])
+    paths = ["/", "/ssc", "/privacy"]
     today = dt.date.today().isoformat()
     urls = "".join(f"<url><loc>{base}{p}</loc><lastmod>{today}</lastmod></url>" for p in paths)
     xml = f'<?xml version="1.0" encoding="UTF-8"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{urls}</urlset>'
