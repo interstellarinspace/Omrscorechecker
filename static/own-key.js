@@ -6,7 +6,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var form = $("own-form");
   if (!form) return;
-  var E = window.OMREngine, parsed = null, keyPages = [], STORE = "omr-own-v1";
+  var E = window.OMREngine, parsed = null, keyPages = [], STORE = "omr-own-v2";
 
   // The page loads the calculator straight away, so it is ready when the student is.
   E.load().catch(function () {});
@@ -64,22 +64,28 @@
       for (var i = 0; i < imgs.length && i < 30; i++) {
         $("own-keyinfo").textContent = "Reading the key" + (imgs.length > 1 ? " (page " + (i + 1) + " of " + imgs.length + ")" : "") + "…";
         var r = await E.call("omr_custom_key_page", await imgs[i].bytes());
-        if (!r.error) keyPages.push({ page: imgs[i].page, text: r.text, unsure: r.unsure, rows: r.rows });
+        if (r.error) continue;
+        // a question whose answer could not be read clearly is left out of the marks
+        var text = r.text.split("\n").filter(function (ln) { return ln.indexOf("?") < 0; }).join("\n") + "\n";
+        var k = await E.call("omr_custom_key", text, 100);
+        if (!k.error) keyPages.push({ page: imgs[i].page, text: text, unsure: r.unsure, rows: r.rows, keys: k.keys, sets: k.sets });
       }
       if (!keyPages.length) { $("own-keyinfo").className = "bad small"; $("own-keyinfo").textContent = "Could not find an answer key table in this file. Try a clearer photo or the key PDF."; return; }
       $("own-keypage-wrap").hidden = keyPages.length < 2;
-      $("own-keypage").innerHTML = keyPages.map(function (p, i) { return '<option value="' + i + '">Page ' + p.page + " (" + p.rows + " questions)</option>"; }).join("");
-      usePage(0);
+      $("own-keypage").innerHTML = (keyPages.length > 1 ? '<option value="auto">The page that matches my OMR sheet (automatic)</option>' : "") +
+        keyPages.map(function (p, i) { return '<option value="' + i + '">Page ' + p.page + " (" + p.rows + " questions)</option>"; }).join("");
+      usePage(keyPages.length > 1 ? "auto" : 0);
     } catch (e) { console.error(e); $("own-keyinfo").className = "bad small"; $("own-keyinfo").textContent = "Could not read this file. Check your internet connection and try again."; }
   });
-  $("own-keypage").addEventListener("change", function () { usePage(+this.value); });
+  $("own-keypage").addEventListener("change", function () { usePage(this.value === "auto" ? "auto" : +this.value); });
+  function keyChoice() { var v = $("own-keypage").value; return keyPages.length > 1 && v === "auto" ? "auto" : (keyPages[+v] ? +v : null); }
   async function usePage(i) {
-    var p = keyPages[i];
-    // a question whose answer could not be read clearly is left out of the marks
-    $("own-key").value = p.text.split("\n").filter(function (ln) { return ln.indexOf("?") < 0; }).join("\n") + "\n";
+    var p = keyPages[i === "auto" ? 0 : i];
+    $("own-key").value = p.text;
     if (p.rows) $("own-n").value = Math.min(100, p.rows);
     await parseKey();
-    if (p.unsure.length) {
+    if (i === "auto") $("own-keyinfo").textContent = "Key file read: " + keyPages.length + " keys (pages " + keyPages.map(function (x) { return x.page; }).join(", ") + "). The one that matches your OMR sheet is used; you can also choose the page above.";
+    if (i !== "auto" && p.unsure.length) {
       $("own-keyinfo").className = "bad small";
       $("own-keyinfo").textContent = $("own-keyinfo").textContent + " Questions " + p.unsure.slice(0, 12).join(", ") + (p.unsure.length > 12 ? "…" : "") + " could not be read clearly, so they are left out of the marks. A clearer photo may read them.";
     }
@@ -156,7 +162,9 @@
       await parseKey();
       if (!parsed) { error($("own-key").value.trim() ? $("own-keyinfo").textContent : "Upload the answer key first (step 1)."); return; }
       if (perQ().bad) { error($("own-summary").textContent); return; }
-      var sc = scheme(), keys = JSON.stringify(parsed.keys), name = $("own-name").value.trim(), out;
+      var ch = keyChoice(), keys = JSON.stringify(ch === "auto" ? { pages: keyPages.map(function (p) { return { label: "Key page " + p.page, keys: p.keys }; }) }
+        : { pages: [{ label: ch !== null ? "Key page " + keyPages[ch].page : "", keys: parsed.keys }] });
+      var sc = scheme(), name = $("own-name").value.trim(), out;
       {
         var f = $("own-sheet").files[0];
         if (!f) { error("Upload a photo or PDF of your OMR sheet (step 3)."); return; }
@@ -180,7 +188,8 @@
       }
       out.own_key = true;
       delete out.annotated_b64;   // the sheet itself is not shown, only the marks
-      out.marking_note = $("own-summary").textContent.replace(/^Out of [\d.]+ marks\. /, "Your marking: ");
+      out.marking_note = $("own-summary").textContent.replace(/^Out of [\d.]+ marks\. /, "Your marking: ") +
+        (out.key_used ? " Key used: " + out.key_used + (out.key_how === "matched" ? " (picked because your answers match it best)" : out.key_how === "from your sheet" ? " (the set shaded on your sheet)" : "") + "." : "");
       window.OMRResult.render(out);
     } catch (e) {
       console.error(e);
@@ -196,7 +205,8 @@
   if ($("again")) $("again").addEventListener("click", function () { $("own-sheet").value = ""; $("own-pick").innerHTML = pickHTML; });
 
   // ---------- remember the key and scheme on this device ----------
-  var FIELDS = ["own-key", "own-n", "own-correct", "own-wrong", "own-blank", "own-multi", "own-skip", "own-perq"];
+  // The key itself is not kept: an old key quietly reused would give wrong marks.
+  var FIELDS = ["own-n", "own-correct", "own-wrong", "own-blank", "own-multi", "own-skip", "own-perq"];
   function save() {
     try {
       var d = {}; FIELDS.forEach(function (id) { d[id] = $(id).value; });
@@ -214,5 +224,5 @@
     }
   } catch (e) { /* ignore */ }
   summary();
-  if ($("own-key").value.trim()) parseKey().catch(console.error);
+
 })();

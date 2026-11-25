@@ -106,3 +106,38 @@ def grade(answers, key, scheme):
         maxs += w
     g["score"], g["max_score"] = round(score, 2), round(maxs, 2)
     return g
+
+
+def choose_key(pages, answers, version="", want=""):
+    """Pick the key (page of the key file, and set) that fits the sheet.
+
+    pages: [{"label": "Page 2", "keys": {set: {q: ans}}}]. The set shaded on the sheet (version)
+    or the one the student chose (want) is used when the key has it; among pages, and among sets
+    when the sheet's set is unknown, the one the answers agree with most is taken, but only when
+    it is clearly ahead. Returns (page index, set, how) or raises ValueError.
+    """
+    given = {a["q"]: a["answer"] for a in answers if a["status"] == "ok"}
+
+    def agree(key):
+        return sum(1 for q, k in key.items() if k != "X" and given.get(q) and given[q] in k)
+
+    cands = [(i, s) for i, p in enumerate(pages) for s in p["keys"]]
+    how = "chosen"
+    if want and any(s == want for _, s in cands):
+        cands = [c for c in cands if c[1] == want]
+    elif version and any(s == version for _, s in cands):
+        cands = [c for c in cands if c[1] == version]
+        how = "from your sheet"
+    elif len({s for _, s in cands}) > 1:
+        how = "matched"
+    if len(cands) == 1:
+        return cands[0][0], cands[0][1], how
+    scored = sorted(((agree(pages[i]["keys"][s]), i, s) for i, s in cands), reverse=True)
+    best, second = scored[0][0], scored[1][0]
+    if best >= 15 and best - second >= 8 and best >= 1.3 * second:
+        return scored[0][1], scored[0][2], how if how != "chosen" else "matched"
+    sets = sorted({s for _, s in cands})
+    if len(sets) > 1:
+        raise ValueError("Your key has " + str(len(sets)) + " sets (" + ", ".join(sets) + ") and the set on your sheet "
+                         + ("reads " + version if version else "could not be read") + ". Choose your set and check again.")
+    raise ValueError("Your key file has more than one key in it and your answers do not clearly match one of them. Choose the page with your subject's key and check again.")
