@@ -36,7 +36,7 @@ def get(path):
     return r.data
 
 
-pages = {"/": "index.html", "/results": "results.html", "/privacy": "privacy.html", "/my-key": "my-key.html", "/sitemap.xml": "sitemap.xml", "/robots.txt": "robots.txt"}
+pages = {"/": "index.html", "/results": "results.html", "/privacy": "privacy.html", "/my-key": "my-key.html", "/ssc": "ssc.html", "/sitemap.xml": "sitemap.xml", "/robots.txt": "robots.txt"}
 if A.ADMIN_PAGE:   # unlinked admin page
     pages["/" + A.ADMIN_PAGE] = A.ADMIN_PAGE + ".html"
 slugs = {e["id"]: e["slug"] for e in cfg.get("exams", [])}

@@ -185,7 +185,7 @@
 <body>
 <header class="top">
   <div class="bar">
-    <button type="button" class="back" id="nav-back" aria-label="Go back"{% if request.endpoint in ('index', 'results_page', 'my_key') and not r %} hidden{% endif %}>
+    <button type="button" class="back" id="nav-back" aria-label="Go back"{% if request.endpoint in ('index', 'results_page', 'my_key', 'ssc') and not r %} hidden{% endif %}>
       <svg width="16" height="16" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M15.4 5.4 14 4l-8 8 8 8 1.4-1.4L8.8 12z"/></svg>Back</button>
     <a class="brand" href="{{ url_for('index') }}"><img src="{{ url_for('static', filename='icon-192.png') }}" alt="">OMR Score Check</a>
   </div>
@@ -193,6 +193,7 @@
     <a href="{{ url_for('index') }}"{% if request.endpoint == 'index' %} class="on"{% endif %}>Check score</a>
     {% for e in exams %}<a href="{{ url_for('exam_page', exam_id=e.id) }}"{% if (exam is defined and exam and exam.id == e.id) %} class="on"{% endif %}>{{ e.name }}</a>{% endfor %}
     <a href="{{ url_for('my_key') }}"{% if request.endpoint == 'my_key' %} class="on"{% endif %}>Your own key</a>
+    <a href="{{ url_for('ssc') }}"{% if request.endpoint == 'ssc' %} class="on"{% endif %}>SSC marks</a>
     <span class="sep"></span><a href="{{ url_for('results_page') }}"{% if request.endpoint == 'results_page' %} class="on"{% endif %}>Search by Register No. &amp; Exam</a>
   </nav>
 </header>
@@ -214,6 +215,7 @@
   Answer keys are the provisional keys published by the exam authority; the final keys and results they announce are what count.</p>
   <p><a href="{{ url_for('index') }}">Check your score</a> ·
   {% for e in exams %}<a href="{{ url_for('exam_page', exam_id=e.id) }}">{{ e.name }} answer keys</a> · {% endfor %}
+  <a href="{{ url_for('ssc') }}">SSC marks calculator</a> ·
   <a href="{{ url_for('results_page') }}">Search by register number and exam</a> ·
   <a href="{{ url_for('privacy') }}">Privacy</a></p>
 </footer>
