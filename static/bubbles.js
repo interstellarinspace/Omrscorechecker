@@ -1,6 +1,7 @@
-// Falling OMR answer bubbles in the page background. Moving the mouse over one, or tapping it,
-// bursts it. The canvas sits behind the page and never takes clicks, so buttons, forms and ads
-// work as usual. Turned off for people who ask their device for reduced motion.
+// Falling OMR answer bubbles. Moving the mouse over one, or tapping it, bursts it.
+// On wide screens they fall in the page background. On phones and tablets the cards fill the
+// screen, so the bubbles fall faintly over the page instead. Either way the canvas never takes a
+// tap or click, so buttons, forms and ads work as usual. Off for people who ask for reduced motion.
 (function () {
   "use strict";
   if (!window.requestAnimationFrame || !document.createElement("canvas").getContext) return;
@@ -12,16 +13,22 @@
   var cv = document.createElement("canvas");
   cv.id = "bubble-sky";
   cv.setAttribute("aria-hidden", "true");
-  cv.style.cssText = "position:fixed;inset:0;width:100%;height:100%;z-index:-1;pointer-events:none;";
+  var over = false;   // true: drawn over the page (phones), false: behind it (wide screens)
+  function place() {
+    over = window.innerWidth < 900 || !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+    cv.style.cssText = "position:fixed;top:0;left:0;right:0;bottom:0;width:100%;height:100%;pointer-events:none;" +
+      (over ? "z-index:2147483000;" : "z-index:-1;");
+  }
+  place();
   document.body.insertBefore(cv, document.body.firstChild);
   var ctx = cv.getContext("2d");
   var W = 0, H = 0, dpr = 1, bubbles = [], bits = [], running = true, last = 0;
 
   function rand(a, b) { return a + Math.random() * (b - a); }
-  function target() { return Math.max(10, Math.min(42, Math.round(W * H / 22000))); }
+  function target() { return over ? Math.max(8, Math.min(14, Math.round(W * H / 30000))) : Math.max(10, Math.min(42, Math.round(W * H / 22000))); }
 
   function make(top) {
-    var r = W < 600 ? rand(10, 17) : rand(12, 22);
+    var r = W < 600 ? rand(11, 17) : rand(12, 22);
     return {
       x: rand(r, W - r), y: top ? rand(-H, H) : rand(-80, -r - 4), r: r,
       vy: rand(18, 46) * (r / 16), sway: rand(6, 18), phase: rand(0, 6.28), spin: rand(0.4, 1.2),
@@ -31,6 +38,7 @@
 
   function resize() {
     dpr = Math.min(window.devicePixelRatio || 1, 2);
+    place();
     W = window.innerWidth; H = window.innerHeight;
     cv.width = Math.round(W * dpr); cv.height = Math.round(H * dpr);
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
@@ -40,7 +48,7 @@
   }
 
   function drawBubble(b, x) {
-    ctx.globalAlpha = b.a;
+    ctx.globalAlpha = over ? b.a * 0.6 : b.a;
     ctx.beginPath(); ctx.arc(x, b.y, b.r, 0, 6.2832);
     if (b.shaded) { ctx.fillStyle = DARK; ctx.fill(); }
     else {
@@ -62,9 +70,9 @@
     if (b.shaded) bits.push({ k: "text", x: x, y: b.y, life: 0, max: 0.8, t: "+1" });
   }
 
-  function hit(px, py) {
+  function hit(px, py, pad) {
     for (var i = bubbles.length - 1; i >= 0; i--) {
-      var b = bubbles[i], x = b.x + Math.sin(b.phase) * b.sway, dx = px - x, dy = py - b.y, rr = b.r + 6;
+      var b = bubbles[i], x = b.x + Math.sin(b.phase) * b.sway, dx = px - x, dy = py - b.y, rr = b.r + (pad || 6);
       if (dx * dx + dy * dy <= rr * rr) { burst(b, x); bubbles[i] = make(false); }
     }
   }
@@ -106,8 +114,14 @@
 
   window.addEventListener("resize", resize);
   // Listen on the whole page (the canvas never takes the pointer); this never blocks a click or a scroll.
-  window.addEventListener("pointermove", function (e) { if (e.pointerType === "mouse" || e.buttons) hit(e.clientX, e.clientY); }, { passive: true });
-  window.addEventListener("pointerdown", function (e) { hit(e.clientX, e.clientY); }, { passive: true });
+  window.addEventListener("pointermove", function (e) { if (e.pointerType === "mouse" || e.buttons) hit(e.clientX, e.clientY, e.pointerType === "mouse" ? 6 : 18); }, { passive: true });
+  window.addEventListener("pointerdown", function (e) { hit(e.clientX, e.clientY, e.pointerType === "mouse" ? 6 : 18); }, { passive: true });
+  // Older phone browsers without pointer events
+  if (!window.PointerEvent) {
+    var touch = function (e) { for (var i = 0; i < e.touches.length; i++) hit(e.touches[i].clientX, e.touches[i].clientY, 18); };
+    window.addEventListener("touchstart", touch, { passive: true });
+    window.addEventListener("touchmove", touch, { passive: true });
+  }
   document.addEventListener("visibilitychange", function () { if (document.hidden) running = false; else start(); });
   if (mq) {
     var onChange = function () { if (mq.matches) stop(); else start(); };
