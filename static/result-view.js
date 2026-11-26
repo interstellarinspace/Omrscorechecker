@@ -92,9 +92,9 @@
   // ---------- marked OMR in a new tab ----------
   function sheetPage(src) {
     return '<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">' +
-      '<meta name="robots" content="noindex"><title>My marked OMR sheet</title><style>body{margin:0;background:#f3f4ff;font:15px/1.45 system-ui,sans-serif;color:#1b1f3b}' +
-      'header{background:linear-gradient(120deg,#4338ca,#7c3aed 55%,#db2777);color:#fff;padding:12px 16px;font-weight:700}main{max-width:900px;margin:0 auto;padding:12px}' +
-      'p{margin:0 0 10px;color:#5f6787}img{width:100%;border-radius:8px;border:1px solid #e3e5f3;background:#fff}</style></head><body>' +
+      '<meta name="robots" content="noindex"><title>My marked OMR sheet</title><style>body{margin:0;background:#fff;font:15px/1.45 system-ui,sans-serif;color:#0b3d20}' +
+      'header{background:linear-gradient(120deg,#14532d,#15803d 55%,#16a34a);color:#fff;padding:12px 16px;font-weight:700}main{max-width:900px;margin:0 auto;padding:12px}' +
+      'p{margin:0 0 10px;color:#3f6b52}img{width:100%;border-radius:8px;border:1px solid #cfe9d8;background:#fff}</style></head><body>' +
       "<header>My marked OMR sheet · " + esc(current.subject_name) + " · Set " + esc(current.version || "?") + "</header><main>" +
       "<p>Green ring: correct. Red ring: wrong, with the right answer ringed thinly in green. Orange: more than one bubble shaded. " +
       "Blue: option 5 (not attempted), and the version, register and booklet numbers. Close this tab to go back to your score.</p>" +
@@ -134,36 +134,36 @@
   function drawCard(r, full) {
     var W = 1080, H = 1350, cv = document.createElement("canvas"); cv.width = W; cv.height = H;
     var ctx = cv.getContext("2d"), g = r.grading, c = g.counts;
-    var bg = ctx.createLinearGradient(0, 0, W, H); bg.addColorStop(0, "#4338ca"); bg.addColorStop(0.55, "#7c3aed"); bg.addColorStop(1, "#db2777");
+    var bg = ctx.createLinearGradient(0, 0, W, H); bg.addColorStop(0, "#14532d"); bg.addColorStop(0.55, "#15803d"); bg.addColorStop(1, "#16a34a");
     ctx.fillStyle = bg; ctx.fillRect(0, 0, W, H);
     ctx.fillStyle = "rgba(255,255,255,.10)"; ctx.beginPath(); ctx.arc(W - 60, 70, 210, 0, 7); ctx.fill(); ctx.beginPath(); ctx.arc(70, H - 40, 170, 0, 7); ctx.fill();
     ctx.textAlign = "center"; ctx.fillStyle = "#fff";
     ctx.font = "800 54px system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif"; ctx.fillText(SITE.name || "OMR Score Check", W / 2, 110);
     ctx.font = "600 32px system-ui, sans-serif"; ctx.globalAlpha = 0.9; ctx.fillText((examOf(r) ? examOf(r) + " · " : "") + "Score card", W / 2, 162); ctx.globalAlpha = 1;
     // panel
-    ctx.save(); ctx.shadowColor = "rgba(30,20,90,.35)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
+    ctx.save(); ctx.shadowColor = "rgba(10,60,30,.35)"; ctx.shadowBlur = 40; ctx.shadowOffsetY = 14;
     rr(ctx, 70, 220, W - 140, 960, 44); ctx.fillStyle = "#fff"; ctx.fill(); ctx.restore();
-    ctx.fillStyle = "#1b1f3b"; fit(ctx, r.name || "Candidate", W - 220, 58, "800"); ctx.fillText(r.name || "Candidate", W / 2, 320);
-    ctx.fillStyle = "#5f6787"; fit(ctx, r.subject_name || "", W - 220, 36, "600"); ctx.fillText(r.subject_name || "", W / 2, 374);
+    ctx.fillStyle = "#0b3d20"; fit(ctx, r.name || "Candidate", W - 220, 58, "800"); ctx.fillText(r.name || "Candidate", W / 2, 320);
+    ctx.fillStyle = "#3f6b52"; fit(ctx, r.subject_name || "", W - 220, 36, "600"); ctx.fillText(r.subject_name || "", W / 2, 374);
     // ring
     var cx = W / 2, cy = 600, R = 170, pct = g.max_score ? Math.max(0, Math.min(1, g.score / g.max_score)) : 0;
-    ctx.lineWidth = 34; ctx.lineCap = "round"; ctx.strokeStyle = "#ece9fe"; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
-    var rg = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R); rg.addColorStop(0, "#4338ca"); rg.addColorStop(0.6, "#7c3aed"); rg.addColorStop(1, "#db2777");
+    ctx.lineWidth = 34; ctx.lineCap = "round"; ctx.strokeStyle = "#dcfce7"; ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.stroke();
+    var rg = ctx.createLinearGradient(cx - R, cy - R, cx + R, cy + R); rg.addColorStop(0, "#14532d"); rg.addColorStop(0.6, "#15803d"); rg.addColorStop(1, "#16a34a");
     if (pct > 0) { ctx.strokeStyle = rg; ctx.beginPath(); ctx.arc(cx, cy, R, -Math.PI / 2, -Math.PI / 2 + pct * 2 * Math.PI); ctx.stroke(); }
-    ctx.fillStyle = "#3b2fc9"; fit(ctx, fmt(g.score), 2 * R - 90, 104, "800"); ctx.fillText(fmt(g.score), cx, cy + 22);
-    ctx.fillStyle = "#5f6787"; ctx.font = "600 32px system-ui, sans-serif"; ctx.fillText("out of " + fmt(g.max_score), cx, cy + 74);
+    ctx.fillStyle = "#15803d"; fit(ctx, fmt(g.score), 2 * R - 90, 104, "800"); ctx.fillText(fmt(g.score), cx, cy + 22);
+    ctx.fillStyle = "#3f6b52"; ctx.font = "600 32px system-ui, sans-serif"; ctx.fillText("out of " + fmt(g.max_score), cx, cy + 74);
     // stats
-    var tiles = [["Correct", c.correct, "#dcfce7", "#15803d"], ["Wrong", c.wrong, "#fee2e2", "#dc2626"], ["Option " + (r.five || "5"), c.skipped, "#e0f2fe", "#0369a1"],
-      ["Blank", c.blank, "#eef0f5", "#4b5563"], ["Multiple", c.multiple, "#ffedd5", "#c2410c"]];
+    var tiles = [["Correct", c.correct, "#dcfce7", "#15803d"], ["Wrong", c.wrong, "#fef2f2", "#b91c1c"], ["Option " + (r.five || "5"), c.skipped, "#f0fdf4", "#14532d"],
+      ["Blank", c.blank, "#f0fdf4", "#3f6b52"], ["Multiple", c.multiple, "#ecfdf3", "#166534"]];
     var tw = 164, gap = 14, x0 = (W - (tw * 5 + gap * 4)) / 2;
     tiles.forEach(function (t, i) {
       var x = x0 + i * (tw + gap); rr(ctx, x, 830, tw, 132, 22); ctx.fillStyle = t[2]; ctx.fill();
       ctx.fillStyle = t[3]; ctx.font = "800 54px system-ui, sans-serif"; ctx.fillText(String(t[1]), x + tw / 2, 900);
       ctx.font = "600 25px system-ui, sans-serif"; ctx.fillText(t[0], x + tw / 2, 940);
     });
-    ctx.fillStyle = "#3730a3"; ctx.font = "600 30px system-ui, sans-serif";
+    ctx.fillStyle = "#166534"; ctx.font = "600 30px system-ui, sans-serif";
     ctx.fillText("Set " + (r.version || "?") + "   ·   Register " + (full ? r.register_number : mask(r.register_number)) + "   ·   Booklet " + (r.booklet_serial || ""), W / 2, 1030);
-    ctx.fillStyle = "#5f6787"; ctx.font = "500 26px system-ui, sans-serif";
+    ctx.fillStyle = "#3f6b52"; ctx.font = "500 26px system-ui, sans-serif";
     ctx.fillText("Checked on " + today() + " against " + (r.own_key ? "your own answer key" : "the provisional answer key"), W / 2, 1082);
     ctx.fillText("Unofficial estimate. The final key and official results are what count.", W / 2, 1122);
     ctx.fillStyle = "#fff"; ctx.font = "700 34px system-ui, sans-serif"; ctx.fillText("Check your score free", W / 2, 1250);
@@ -214,7 +214,7 @@
         doc.addPage();
         doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.setTextColor(27, 31, 59);
         doc.text("Question by question · " + (current.subject_name || "") + " · Set " + (current.version || "?"), 15, 16);
-        var colors = { correct: [21, 128, 61], wrong: [220, 38, 38], multiple: [194, 65, 12], skipped: [3, 105, 161], blank: [95, 103, 135], dropped: [95, 103, 135] };
+        var colors = { correct: [21, 128, 61], wrong: [220, 38, 38], multiple: [22, 101, 52], skipped: [20, 83, 45], blank: [63, 107, 82], dropped: [63, 107, 82] };
         var label = { skipped: "option " + (current.five || "5") };
         doc.setFontSize(8);
         for (var col = 0; col < 4; col++) {
@@ -228,7 +228,7 @@
           var x = 15 + col * 46, yy = 33 + row * 10;
           doc.setTextColor(27, 31, 59);
           doc.text(String(q.q), x, yy); doc.text(q.given === "*" ? "multi" : (q.given || "-"), x + 7, yy); doc.text(q.key || "drop", x + 17, yy);
-          var cl = colors[q.result] || [27, 31, 59]; doc.setTextColor(cl[0], cl[1], cl[2]);
+          var cl = colors[q.result] || [11, 61, 32]; doc.setTextColor(cl[0], cl[1], cl[2]);
           doc.text((label[q.result] || q.result) + " (" + fmt(q.marks) + ")", x + 25, yy);
           void page;
         });

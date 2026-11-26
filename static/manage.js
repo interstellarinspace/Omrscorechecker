@@ -191,7 +191,7 @@
       sel.innerHTML = subjectOptions(x[1]);
       if (v && sel.querySelector('option[value="' + v + '"]')) sel.value = v;
     });
-    renderKeySets(); renderOne(); renderBulkLayout();
+    renderKeySets(); renderOne(); renderBulkLayout(); renderAds();
     $("keys-status").innerHTML = (c.exams || []).map(function (e) {
       var subs = c.subjects.filter(function (s) { return s.exam === e.id; }); if (!subs.length) return "";
       var codes = sc(subs[0].id).set_codes, n = sc(subs[0].id).num_questions;
@@ -369,6 +369,41 @@
     S.cfg = latest; await OMREngine.setFiles({ "config.json": text }); renderAll();
     return result;
   }
+  // ---------- ads (Google AdSense) ----------
+  var AD_PAGES = ["home", "ssc", "results", "keys", "exams", "privacy"], AD_SLOTS = ["top", "middle", "bottom"];
+  function adClient(v) { v = (v || "").trim(); if (/^pub-\d+$/.test(v)) v = "ca-" + v; return v; }
+  function renderAds() {
+    var a = (S.cfg && S.cfg.ads) || {}, pages = a.pages || {};
+    $("ads-on").checked = !!a.enabled; $("ads-auto").checked = !!a.auto_ads; $("ads-client").value = a.client || "";
+    AD_SLOTS.forEach(function (k) { $("ads-slot-" + k).value = (a.slots || {})[k] || ""; });
+    Array.prototype.forEach.call(document.querySelectorAll("#ads-pages input"), function (x) { x.checked = pages[x.value] !== false; });
+    adsTxtPreview();
+  }
+  function adsTxtPreview() {
+    var c = adClient($("ads-client").value);
+    $("ads-txt").textContent = /^ca-pub-\d{10,20}$/.test(c) ? "google.com, " + c.slice(3) + ", DIRECT, f08c47fec0942fa0" : "(enter your publisher ID first)";
+  }
+  $("ads-client").addEventListener("input", adsTxtPreview);
+  $("ads-save").addEventListener("click", async function () {
+    var client = adClient($("ads-client").value), on = $("ads-on").checked, slots = {}, pages = {};
+    if (client && !/^ca-pub-\d{10,20}$/.test(client)) { msg("ads-msg", "The publisher ID looks like ca-pub- followed by 16 digits.", "bad"); return; }
+    for (var i = 0; i < AD_SLOTS.length; i++) {
+      var v = $("ads-slot-" + AD_SLOTS[i]).value.trim();
+      if (v && !/^\d{6,20}$/.test(v)) { msg("ads-msg", "An ad unit's slot ID is a number (the data-ad-slot value).", "bad"); return; }
+      if (v) slots[AD_SLOTS[i]] = v;
+    }
+    Array.prototype.forEach.call(document.querySelectorAll("#ads-pages input"), function (x) { pages[x.value] = x.checked; });
+    if (on && !client) { msg("ads-msg", "Enter your AdSense publisher ID to turn ads on.", "bad"); return; }
+    if (on && !$("ads-auto").checked && !Object.keys(slots).length) { msg("ads-msg", "Add at least one ad unit slot ID, or allow Auto ads.", "bad"); return; }
+    var b = this; b.disabled = true; msg("ads-msg", "Saving…");
+    try {
+      await saveConfig(function (c) { c.ads = { enabled: on, client: client, auto_ads: $("ads-auto").checked, slots: slots, pages: pages }; },
+        "Ad settings: ads " + (on ? "on" : "off"), "ads-msg");
+      msg("ads-msg", (on ? "Saved. Ads show on the website" : "Saved. Ads are off on the website") + " in about 1 to 2 minutes.", "ok");
+    } catch (e) { console.error(e); msg("ads-msg", e.message, "bad"); }
+    b.disabled = false;
+  });
+
   $("subj-add").addEventListener("click", async function () {
     var exam = $("new-exam").value, paper = $("new-paper").value.trim(), subject = $("new-subject").value.trim();
     var short = $("new-short").value.trim() || subject;

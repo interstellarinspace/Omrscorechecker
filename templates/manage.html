@@ -13,16 +13,16 @@
   .row2 { display:grid; grid-template-columns:1fr 1fr; gap:10px; }
   .grid-keys td, .grid-keys th { text-align:center; }
   .ok { color:var(--ok); font-weight:700; } .bad { color:var(--bad); font-weight:700; } .warn { color:var(--warn); font-weight:700; }
-  input.check { border-color:var(--warn); background:#fff8e6; }
+  input.check { border-color:var(--warn); background:#f0fdf4; }
   #bulk-table input { width:100%; min-width:92px; padding:6px 8px; font-size:14px; border-radius:6px; }
-  .progress { height:10px; background:#ece9fe; border-radius:99px; overflow:hidden; margin:10px 0; }
+  .progress { height:10px; background:#dcfce7; border-radius:99px; overflow:hidden; margin:10px 0; }
   .progress div { height:100%; width:0; background:var(--grad); transition:width .2s; }
   .radios { display:flex; gap:16px; flex-wrap:wrap; } .radios label { font-weight:500; display:flex; gap:6px; align-items:center; margin:6px 0; }
   .check { display:flex; gap:8px; align-items:center; font-weight:500; }
   .check input { width:auto; }
-  .cand { border:1px solid var(--line); border-radius:14px; padding:14px; margin-top:12px; background:#fcfcff; }
+  .cand { border:1px solid var(--line); border-radius:14px; padding:14px; margin-top:12px; background:#fff; }
   .cand-head { display:flex; justify-content:space-between; gap:12px; align-items:flex-start; margin-bottom:8px; }
-  .cand-score { font-size:1.7rem; font-weight:800; color:#3b2fc9; white-space:nowrap; } .cand-score small { font-size:.9rem; color:var(--muted); font-weight:600; }
+  .cand-score { font-size:1.7rem; font-weight:800; color:#15803d; white-space:nowrap; } .cand-score small { font-size:.9rem; color:var(--muted); font-weight:600; }
   .row2 .btn + .btn { margin-top:0; }
   .exam-block { border:1px solid var(--line); border-radius:12px; padding:10px 12px; margin-top:10px; }
   .exam-block h3 { margin:0 0 6px; font-size:1rem; }
@@ -71,7 +71,42 @@
     <button type="button" data-tab="tab-keys">Answer keys</button>
     <button type="button" data-tab="tab-subjects">Exams &amp; subjects</button>
     <button type="button" data-tab="tab-live">When it went live</button>
+    <button type="button" data-tab="tab-ads">Ads</button>
   </div>
+
+  <section class="card tab" id="tab-ads" hidden>
+    <h2>Ads (Google AdSense)</h2>
+    <p class="muted">Show Google AdSense ads on the public pages. Ads are never shown on this admin page. After you save, the website updates in about 1 to 2 minutes.</p>
+    <label class="check"><input type="checkbox" id="ads-on"> Show ads on the website</label>
+    <label for="ads-client">AdSense publisher ID</label>
+    <input type="text" id="ads-client" placeholder="ca-pub-1234567890123456" autocomplete="off" spellcheck="false">
+    <p class="muted small">In AdSense: Account › Settings › Account information › Publisher ID. You can paste it with or without "ca-".</p>
+    <label class="check"><input type="checkbox" id="ads-auto"> Allow Auto ads (Google picks extra places; turn Auto ads on for this site in AdSense too)</label>
+    <h3>Ad units</h3>
+    <p class="muted small">Make a "Display ad" unit in AdSense (Ads › By ad unit) and paste its <b>data-ad-slot</b> number. Leave a place empty to show no ad there.</p>
+    <div class="grid2">
+      <div><label for="ads-slot-top">Top of page (under the menu)</label><input type="text" id="ads-slot-top" inputmode="numeric" placeholder="e.g. 1234567890"></div>
+      <div><label for="ads-slot-middle">Inside the page (after the first box)</label><input type="text" id="ads-slot-middle" inputmode="numeric" placeholder="e.g. 1234567890"></div>
+      <div><label for="ads-slot-bottom">Bottom of page (above the footer)</label><input type="text" id="ads-slot-bottom" inputmode="numeric" placeholder="e.g. 1234567890"></div>
+    </div>
+    <h3>Pages that show ads</h3>
+    <div class="radios" id="ads-pages">
+      <label><input type="checkbox" value="home"> OMR Scanner (home)</label>
+      <label><input type="checkbox" value="ssc"> SSC marks</label>
+      <label><input type="checkbox" value="results"> Results search</label>
+      <label><input type="checkbox" value="keys"> Answer key pages</label>
+      <label><input type="checkbox" value="exams"> Exam pages</label>
+      <label><input type="checkbox" value="privacy"> Privacy</label>
+    </div>
+    <p></p>
+    <button class="btn" type="button" id="ads-save">Save ad settings</button>
+    <p id="ads-msg"></p>
+    <details><summary>ads.txt and getting approved</summary>
+      <p class="muted">The website publishes this ads.txt line by itself once the publisher ID is saved:</p>
+      <pre id="ads-txt" class="muted" style="white-space:pre-wrap"></pre>
+      <p class="muted">Google only checks ads.txt at the top of a domain (for example <b>example.com/ads.txt</b>). On a github.io address that ends in a folder, Google cannot read it, and AdSense may not approve the site. Connecting your own domain to this site fixes both.</p>
+    </details>
+  </section>
 
   <section class="card tab" id="tab-live" hidden>
     <h2>When each update went live</h2>
