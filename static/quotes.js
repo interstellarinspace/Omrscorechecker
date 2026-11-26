@@ -22,8 +22,8 @@
     ["One exam does not define you. Keep learning, keep growing.", ""],
     ["Your score is a starting line, not a finish line.", ""],
     ["Small steps every day add up to big results.", ""],
-    ["ಪ್ರಯತ್ನವೇ ಯಶಸ್ಸಿನ ಮೊದಲ ಮೆಟ್ಟಿಲು.", "Effort is the first step to success"],
-    ["ಕಲಿಕೆಗೆ ಕೊನೆಯಿಲ್ಲ.", "There is no end to learning"]
+    ["Effort is the first step to success.", ""],
+    ["There is no end to learning.", ""]
   ];
   var COLORS = [
     "linear-gradient(120deg,#14532d,#15803d)", "linear-gradient(120deg,#15803d,#16a34a)", "linear-gradient(120deg,#166534,#22c55e)",
