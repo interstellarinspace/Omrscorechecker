@@ -31,7 +31,7 @@
 <div id="intro">
 <div class="hero">
   <h1>OMR score calculator</h1>
-  <p>Photograph your OMR answer sheet and see your marks in seconds, checked against the provisional answer key, or against any answer key and marking scheme you add yourself. ಕೀ ಉತ್ತರಗಳು ಮತ್ತು ಅಂಕ ಲೆಕ್ಕ.</p>
+  <p>Photograph your OMR answer sheet and see your marks in seconds, checked against the provisional answer key, or against any answer key and marking scheme you add yourself.</p>
   <div class="chips">{% for e in exams %}<span>{{ e.name }}</span>{% endfor %}{% if static_site %}<a href="{{ url_for('my_key') }}" style="color:inherit"><span>Any answer key</span></a>{% endif %}<span>Free</span><span>Score card PDF</span></div>
 </div>
 </div>
