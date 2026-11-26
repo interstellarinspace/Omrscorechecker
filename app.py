@@ -60,10 +60,40 @@ def asset(filename):
     return url_for("static", filename=filename, v=v) if v else url_for("static", filename=filename)
 
 
+# Google AdSense. Settings live in config.json "ads" and are changed from the admin page's Ads tab.
+AD_PAGES = {"index": "home", "my_key": "home", "ssc": "ssc", "results_page": "results", "answer_key": "keys",
+            "exam_page": "exams", "privacy": "privacy"}
+AD_SLOTS = ("top", "middle", "bottom")
+
+
+def ads_settings(c):
+    """The ads to show on the current page: {} when ads are off here, else client, auto and the slot ids."""
+    a = c.get("ads") or {}
+    client = (a.get("client") or "").strip()
+    page = AD_PAGES.get(request.endpoint or "")
+    if not a.get("enabled") or not client.startswith("ca-pub-") or not page or not (a.get("pages") or {}).get(page, True):
+        return {}
+    slots = {k: str(v).strip() for k, v in (a.get("slots") or {}).items() if k in AD_SLOTS and str(v or "").strip().isdigit()}
+    return {"client": client, "auto": bool(a.get("auto_ads")), "slots": slots}
+
+
+def ads_txt(c):
+    client = ((c.get("ads") or {}).get("client") or "").strip()
+    if not client.startswith("ca-pub-"):
+        return ""
+    return "google.com, " + client[3:] + ", DIRECT, f08c47fec0942fa0\n"
+
+
+@app.route("/ads.txt")
+def ads_txt_file():
+    return app.response_class(ads_txt(cfg()), mimetype="text/plain")
+
+
 @app.context_processor
 def inject():
     base = SITE_URL or request.url_root.rstrip("/")
-    return {"asset": asset, "cfg": cfg(), "site_url": base, "play_url": PLAY_URL, "appstore_url": APPSTORE_URL,
+    c = cfg()
+    return {"asset": asset, "cfg": c, "ads": ads_settings(c), "site_url": base, "play_url": PLAY_URL, "appstore_url": APPSTORE_URL,
             "canonical": base + request.path, "static_site": STATIC_SITE, "github_repo": GITHUB_REPO, "build_id": os.environ.get("BUILD_ID", "")}
 
 

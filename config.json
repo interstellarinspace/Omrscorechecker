@@ -197,5 +197,19 @@
       "short": "General Knowledge",
       "slug": "general-knowledge-answer-key"
     }
-  ]
+  ],
+  "ads": {
+    "enabled": false,
+    "client": "",
+    "auto_ads": false,
+    "slots": {},
+    "pages": {
+      "home": true,
+      "ssc": true,
+      "results": true,
+      "keys": true,
+      "exams": true,
+      "privacy": false
+    }
+  }
 }

@@ -26,9 +26,8 @@
     ["ಕಲಿಕೆಗೆ ಕೊನೆಯಿಲ್ಲ.", "There is no end to learning"]
   ];
   var COLORS = [
-    "linear-gradient(120deg,#f97316,#db2777)", "linear-gradient(120deg,#7c3aed,#0ea5e9)", "linear-gradient(120deg,#10b981,#0ea5e9)",
-    "linear-gradient(120deg,#db2777,#7c3aed)", "linear-gradient(120deg,#eab308,#f97316)", "linear-gradient(120deg,#0ea5e9,#10b981)",
-    "linear-gradient(120deg,#e11d48,#f59e0b)", "linear-gradient(120deg,#6366f1,#ec4899)"
+    "linear-gradient(120deg,#14532d,#15803d)", "linear-gradient(120deg,#15803d,#16a34a)", "linear-gradient(120deg,#166534,#22c55e)",
+    "linear-gradient(120deg,#14532d,#16a34a)"
   ];
   var i = Math.floor(Math.random() * Q.length), c = Math.floor(Math.random() * COLORS.length);
   var text = box.querySelector(".q-text"), who = box.querySelector(".q-who");

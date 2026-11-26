@@ -68,6 +68,10 @@ if os.path.isdir(pub):
 with open(os.path.join(OUT, "static", "omr-bundle.json"), "w", encoding="utf-8") as f:
     f.write(bundle_text)
 open(os.path.join(OUT, ".nojekyll"), "w").close()
+ads_line = A.ads_txt(cfg)   # AdSense publisher line, set from the admin page's Ads tab
+if ads_line:
+    with open(os.path.join(OUT, "ads.txt"), "w") as f:
+        f.write(ads_line)
 with open(os.path.join(OUT, "static", "build.json"), "w") as f:
     json.dump({"id": os.environ["BUILD_ID"]}, f)
 with open(os.path.join(OUT, "404.html"), "wb") as f:

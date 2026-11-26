@@ -48,7 +48,7 @@
   function pick(list, i) {
     var bar = $("multi");
     bar.innerHTML = list.length > 1 ? list.map(function (r, j) {
-      return '<button type="button" class="share" style="background:' + (i === j ? "var(--grad)" : "#334155") + '" data-j="' + j + '">' + esc(r.subject_name) + "</button>";
+      return '<button type="button" class="share" style="background:' + (i === j ? "var(--grad)" : "#14532d") + '" data-j="' + j + '">' + esc(r.subject_name) + "</button>";
     }).join("") : "";
     bar.hidden = list.length < 2;
     bar.onclick = function (ev) { var b = ev.target.closest("button"); if (b) pick(list, +b.dataset.j); };
